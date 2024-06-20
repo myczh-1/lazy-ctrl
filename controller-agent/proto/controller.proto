@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package controller;
+
+option go_package = "github.com/myczh-1/lazy-ctrl-agent/proto";
+
+// 控制器服务定义
+service ControllerService {
+  // 执行命令
+  rpc ExecuteCommand(ExecuteCommandRequest) returns (ExecuteCommandResponse);
+  
+  // 获取可用命令列表
+  rpc ListCommands(ListCommandsRequest) returns (ListCommandsResponse);
+  
+  // 重新加载配置
+  rpc ReloadConfig(ReloadConfigRequest) returns (ReloadConfigResponse);
+  
+  // 健康检查
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// 执行命令请求
+message ExecuteCommandRequest {
+  string command_id = 1;        // 命令ID
+  repeated string args = 2;     // 命令参数
+  int32 timeout_seconds = 3;    // 超时时间(秒)，0表示使用默认超时
+}
+
+// 执行命令响应
+message ExecuteCommandResponse {
+  bool success = 1;            // 执行是否成功
+  string output = 2;           // 命令输出
+  string error = 3;            // 错误信息
+  int32 exit_code = 4;         // 退出码
+  int64 execution_time_ms = 5; // 执行时间(毫秒)
+}
+
+// 获取命令列表请求
+message ListCommandsRequest {
+  // 暂时无参数，预留扩展
+}
+
+// 命令信息
+message CommandInfo {
+  string id = 1;               // 命令ID
+  string description = 2;      // 命令描述
+  bool platform_supported = 3; // 当前平台是否支持
+  string platform_command = 4; // 当前平台的实际命令
+}
+
+// 获取命令列表响应
+message ListCommandsResponse {
+  repeated CommandInfo commands = 1;
+}
+
+// 重新加载配置请求
+message ReloadConfigRequest {
+  // 暂时无参数
+}
+
+// 重新加载配置响应
+message ReloadConfigResponse {
+  bool success = 1;
+  string message = 2;
+  int32 commands_loaded = 3;   // 加载的命令数量
+}
+
+// 健康检查请求
+message HealthCheckRequest {
+  // 暂时无参数
+}
+
+// 健康检查响应
+message HealthCheckResponse {
+  string status = 1;           // 状态: "SERVING", "NOT_SERVING"
+  string version = 2;          // 版本信息
+  int64 uptime_seconds = 3;    // 运行时间(秒)
+}
