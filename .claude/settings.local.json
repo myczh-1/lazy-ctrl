@@ -8,7 +8,10 @@
       "Bash(make:*)",
       "Bash(find:*)",
       "Bash(npm run build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(pkill:*)",
+      "Bash(true)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }

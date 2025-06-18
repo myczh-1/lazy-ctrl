@@ -1,0 +1,23 @@
+{
+  "mute": {
+    "windows": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]173)\"",
+    "linux": "amixer set Master mute",
+    "darwin": "osascript -e 'set volume output muted true'"
+  },
+  "unmute": {
+    "windows": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]173)\"",
+    "linux": "amixer set Master unmute",
+    "darwin": "osascript -e 'set volume output muted false'"
+  },
+  "lock": {
+    "windows": "rundll32.exe user32.dll,LockWorkStation",
+    "linux": "xdg-screensaver lock",
+    "darwin": "pmset displaysleepnow"
+  },
+  "volume_up": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]175)\"",
+  "volume_down": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]174)\"",
+  "test_win": "echo Windows test",
+  "shutdown": "echo 'Shutdown command received - would execute: sudo shutdown -h now'",
+  "test": "echo 'Command executed successfully at $(date)'"
+}
+
