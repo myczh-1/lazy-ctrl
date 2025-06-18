@@ -1,0 +1,39 @@
+{
+  "commands": [
+    {
+      "id": "mute",
+      "name": "静音/取消静音",
+      "description": "切换系统音频静音状态",
+      "script_path": "/usr/bin/osascript",
+      "args": ["-e", "set volume output muted not (output muted of (get volume settings))"]
+    },
+    {
+      "id": "shutdown",
+      "name": "关机",
+      "description": "关闭计算机",
+      "script_path": "/sbin/shutdown",
+      "args": ["-h", "now"]
+    },
+    {
+      "id": "sleep",
+      "name": "休眠",
+      "description": "让计算机进入休眠模式",
+      "script_path": "/usr/bin/pmset",
+      "args": ["sleepnow"]
+    }
+  ],
+  "security": {
+    "allowed_paths": [
+      "/usr/bin/",
+      "/sbin/",
+      "/bin/",
+      "./scripts/"
+    ],
+    "whitelist": [
+      "mute",
+      "shutdown",
+      "sleep"
+    ],
+    "require_auth": false
+  }
+}

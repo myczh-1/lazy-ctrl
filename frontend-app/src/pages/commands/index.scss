@@ -1,0 +1,125 @@
+.commands {
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  
+  .title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .refresh-btn {
+    background: #007aff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+}
+
+.result-card {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  .result-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    display: block;
+  }
+  
+  .result-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-bottom: 10px;
+    display: inline-block;
+    
+    &.success {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    &.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+  }
+  
+  .result-output, .result-error {
+    margin-top: 10px;
+    
+    .output-label, .error-label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    .output-content, .error-content {
+      background: #f8f9fa;
+      padding: 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      display: block;
+    }
+  }
+}
+
+.command-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.command-item {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  .command-name {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+  }
+  
+  .command-desc {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 12px;
+    display: block;
+  }
+  
+  .command-button {
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 14px;
+    width: 100%;
+  }
+  
+  .command-button:active {
+    background: #1e7e34;
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
