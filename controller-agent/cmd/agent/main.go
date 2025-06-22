@@ -1,3 +1,20 @@
+// Package main provides the lazy-ctrl-agent server
+//
+//	@title						Lazy-Ctrl Agent API
+//	@version					2.0.0
+//	@description				Remote computer control agent with HTTP/gRPC/MQTT support
+//	@termsOfService				http://swagger.io/terms/
+//	@contact.name				API Support
+//	@contact.url				https://github.com/myczh-1/lazy-ctrl-agent
+//	@contact.email				support@lazy-ctrl.com
+//	@license.name				MIT
+//	@license.url				https://opensource.org/licenses/MIT
+//	@host						localhost:7070
+//	@BasePath					/api/v1
+//	@securityDefinitions.apikey	PinAuth
+//	@in							header
+//	@name						X-Pin
+//	@description				PIN authentication for secure access
 package main
 
 import (
@@ -10,6 +27,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/myczh-1/lazy-ctrl-agent/docs"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/config"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/server/grpc"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/server/http"
@@ -114,7 +132,7 @@ func main() {
 	}
 
 	// 启动所有服务器
-	ctx, cancel := context.WithCancel(context.Background())
+	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	var wg sync.WaitGroup

@@ -16,7 +16,10 @@
       "Bash(go get:*)",
       "Bash(go install:*)",
       "Bash(go build:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(swag init:*)",
+      "Bash(go run:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }

@@ -21,9 +21,11 @@ type ServerConfig struct {
 }
 
 type HTTPConfig struct {
-	Enabled bool   `mapstructure:"enabled"`
-	Host    string `mapstructure:"host"`
-	Port    int    `mapstructure:"port"`
+	Enabled    bool   `mapstructure:"enabled"`
+	Host       string `mapstructure:"host"`
+	Port       int    `mapstructure:"port"`
+	StaticPath string `mapstructure:"static_path"`
+	StaticDir  string `mapstructure:"static_dir"`
 }
 
 type GRPCConfig struct {
@@ -72,7 +74,6 @@ func Load(configPath string) error {
 	if configPath != "" {
 		viper.SetConfigFile(configPath)
 	} else {
-		viper.AddConfigPath("./configs")
 		viper.AddConfigPath("./config")
 		viper.AddConfigPath(".")
 	}
@@ -110,6 +111,8 @@ func setDefaults() {
 	viper.SetDefault("server.http.enabled", true)
 	viper.SetDefault("server.http.host", "0.0.0.0")
 	viper.SetDefault("server.http.port", 7070)
+	viper.SetDefault("server.http.static_path", "")
+	viper.SetDefault("server.http.static_dir", "")
 	viper.SetDefault("server.grpc.enabled", true)
 	viper.SetDefault("server.grpc.host", "0.0.0.0")
 	viper.SetDefault("server.grpc.port", 7071)
