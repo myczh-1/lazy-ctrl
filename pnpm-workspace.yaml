@@ -1,4 +1,3 @@
 packages:
-  - 'config-service'
-  - 'control-frontend'
+  - 'lazy-ctrl-ui'
   - 'cloud-gateway'

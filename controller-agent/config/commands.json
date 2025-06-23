@@ -18,6 +18,6 @@
   "volume_down": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]174)\"",
   "test_win": "echo Windows test",
   "shutdown": "echo 'Shutdown command received - would execute: sudo shutdown -h now'",
-  "test": "echo 'Command executed successfully at $(date)'"
+  "test": "echo \"${PATH}\""
 }
 
