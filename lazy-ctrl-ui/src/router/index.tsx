@@ -5,16 +5,17 @@ import {
   RouterProvider,
   Outlet,
 } from '@tanstack/react-router'
-import { lazy } from 'react'
+import { lazyRouteComponent } from '@tanstack/react-router'
 
 const Root = () => <Outlet />
 
 const rootRoute = createRootRoute({ component: Root })
 
 const routeTree = rootRoute.addChildren([
-  createRoute({ path: '/', component: lazy(() => import('@/pages/LoginIntro')) }),
-  createRoute({ path: '/login', component: lazy(() => import('@/pages/LoginPassword')) }),
-  createRoute({ path: '/commands', component: lazy(() => import('@/pages/CommandList')) }),
+  createRoute({ 
+    path: '/', 
+    getParentRoute: () => rootRoute,
+    component: lazyRouteComponent(() => import('@/pages/Home')) }),
 ])
 
 export const router = createRouter({ routeTree })
