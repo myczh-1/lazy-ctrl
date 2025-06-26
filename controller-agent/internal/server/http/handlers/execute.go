@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/myczh-1/lazy-ctrl-agent/internal/config"
+	"github.com/myczh-1/lazy-ctrl-agent/internal/model"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/service/command"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/service/executor"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/service/security"
@@ -75,33 +79,21 @@ func (h *ExecuteHandler) HandleExecute(c *gin.Context) {
 		return
 	}
 
-	// 获取平台特定命令
-	platformCmd, ok := h.commandService.GetPlatformCommand(cmd)
-	if !ok {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Command not supported on this platform",
-		})
-		return
+	// 检查PIN验证 (新版本命令支持)
+	if config.IsV2Commands() {
+		if h.commandService.RequiresPin(commandID) {
+			pin := c.GetHeader("X-Pin")
+			if !h.securityService.ValidatePin(pin) {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"error": "PIN required or invalid",
+				})
+				return
+			}
+		}
 	}
 
 	// 执行命令
-	var result *executor.ExecutionResult
-	var err error
-
-	timeoutStr := c.Query("timeout")
-	if timeoutStr != "" {
-		if timeout, parseErr := strconv.Atoi(timeoutStr); parseErr == nil {
-			result, err = h.executorService.ExecuteWithTimeout(platformCmd, time.Duration(timeout)*time.Second)
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid timeout parameter",
-			})
-			return
-		}
-	} else {
-		result, err = h.executorService.ExecuteWithTimeout(platformCmd, 30*time.Second)
-	}
-
+	result, err := h.executeCommand(c, commandID, cmd)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -110,4 +102,102 @@ func (h *ExecuteHandler) HandleExecute(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, result)
+}
+
+// executeCommand 执行命令，支持新旧格式
+func (h *ExecuteHandler) executeCommand(c *gin.Context, commandID string, cmd interface{}) (*executor.ExecutionResult, error) {
+	// 获取超时时间
+	timeout := h.getTimeout(c, commandID)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	if config.IsV2Commands() {
+		return h.executeV2Command(ctx, commandID, cmd)
+	}
+	return h.executeLegacyCommand(ctx, cmd, timeout)
+}
+
+// executeV2Command 执行新格式命令
+func (h *ExecuteHandler) executeV2Command(ctx context.Context, commandID string, cmd interface{}) (*executor.ExecutionResult, error) {
+	cmdV2, ok := h.commandService.GetCommandV2(commandID)
+	if !ok {
+		return nil, fmt.Errorf("command not found in v2 format: %s", commandID)
+	}
+
+	// 获取平台特定命令
+	platformCmd, ok := h.commandService.GetPlatformCommand(cmdV2)
+	if ok {
+		// 简单命令
+		return h.executorService.Execute(ctx, platformCmd)
+	}
+
+	// 检查是否是复杂命令序列
+	if steps := h.extractCommandSteps(cmdV2); len(steps) > 0 {
+		return h.executorService.ExecuteSequence(ctx, steps)
+	}
+
+	return nil, fmt.Errorf("command not supported on this platform")
+}
+
+// executeLegacyCommand 执行旧格式命令
+func (h *ExecuteHandler) executeLegacyCommand(ctx context.Context, cmd interface{}, timeout time.Duration) (*executor.ExecutionResult, error) {
+	platformCmd, ok := h.commandService.GetPlatformCommand(cmd)
+	if !ok {
+		return nil, fmt.Errorf("command not supported on this platform")
+	}
+	return h.executorService.Execute(ctx, platformCmd)
+}
+
+// extractCommandSteps 从命令中提取命令步骤
+func (h *ExecuteHandler) extractCommandSteps(cmd *model.Command) []model.CommandStep {
+	platform := runtime.GOOS
+
+	platformData, ok := cmd.Platforms[platform]
+	if !ok {
+		return nil
+	}
+
+	if platformMap, ok := platformData.(map[string]interface{}); ok {
+		if commandsData, ok := platformMap["commands"]; ok {
+			if commandsList, ok := commandsData.([]interface{}); ok {
+				steps := make([]model.CommandStep, 0, len(commandsList))
+				for _, stepData := range commandsList {
+					if stepMap, ok := stepData.(map[string]interface{}); ok {
+						step := model.CommandStep{}
+						if stepType, ok := stepMap["type"].(string); ok {
+							step.Type = stepType
+						}
+						if cmd, ok := stepMap["cmd"].(string); ok {
+							step.Cmd = cmd
+						}
+						if duration, ok := stepMap["duration"].(float64); ok {
+							step.Duration = int(duration)
+						}
+						steps = append(steps, step)
+					}
+				}
+				return steps
+			}
+		}
+	}
+	return nil
+}
+
+// getTimeout 获取超时时间
+func (h *ExecuteHandler) getTimeout(c *gin.Context, commandID string) time.Duration {
+	// 优先使用URL参数
+	if timeoutStr := c.Query("timeout"); timeoutStr != "" {
+		if timeout, err := strconv.Atoi(timeoutStr); err == nil {
+			return time.Duration(timeout) * time.Second
+		}
+	}
+
+	// 使用命令特定超时
+	if config.IsV2Commands() {
+		timeout := h.commandService.GetCommandTimeout(commandID)
+		return time.Duration(timeout) * time.Millisecond
+	}
+
+	// 默认超时
+	return 30 * time.Second
 }

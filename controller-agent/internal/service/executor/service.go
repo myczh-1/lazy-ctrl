@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/myczh-1/lazy-ctrl-agent/internal/model"
 )
 
 type Service struct {
@@ -126,4 +127,82 @@ func (s *Service) ValidateCommand(command string) error {
 	}
 
 	return nil
+}
+
+// ExecuteSequence 执行命令序列 (为未来的复杂命令支持)
+func (s *Service) ExecuteSequence(ctx context.Context, steps []model.CommandStep) (*ExecutionResult, error) {
+	startTime := time.Now()
+	var allOutput strings.Builder
+	var lastError error
+	
+	s.logger.WithFields(logrus.Fields{
+		"steps": len(steps),
+	}).Info("Executing command sequence")
+	
+	for i, step := range steps {
+		switch step.Type {
+		case "shell":
+			s.logger.WithFields(logrus.Fields{
+				"step":    i + 1,
+				"command": step.Cmd,
+			}).Info("Executing shell step")
+			
+			result, err := s.Execute(ctx, step.Cmd)
+			if err != nil {
+				lastError = err
+				allOutput.WriteString(fmt.Sprintf("Step %d failed: %s\n", i+1, err.Error()))
+				break
+			}
+			
+			allOutput.WriteString(fmt.Sprintf("Step %d: %s\n", i+1, result.Output))
+			
+			if !result.Success {
+				lastError = fmt.Errorf("step %d failed: %s", i+1, result.Error)
+				break
+			}
+			
+		case "delay":
+			s.logger.WithFields(logrus.Fields{
+				"step":     i + 1,
+				"duration": step.Duration,
+			}).Info("Executing delay step")
+			
+			select {
+			case <-time.After(time.Duration(step.Duration) * time.Millisecond):
+				allOutput.WriteString(fmt.Sprintf("Step %d: Delayed %dms\n", i+1, step.Duration))
+			case <-ctx.Done():
+				lastError = ctx.Err()
+				allOutput.WriteString(fmt.Sprintf("Step %d: Cancelled\n", i+1))
+				break
+			}
+			
+		default:
+			lastError = fmt.Errorf("unknown step type: %s", step.Type)
+			allOutput.WriteString(fmt.Sprintf("Step %d: Unknown type %s\n", i+1, step.Type))
+			break
+		}
+	}
+	
+	executionTime := time.Since(startTime)
+	result := &ExecutionResult{
+		Success:       lastError == nil,
+		Output:        allOutput.String(),
+		ExecutionTime: executionTime,
+	}
+	
+	if lastError != nil {
+		result.Error = lastError.Error()
+		result.ExitCode = 1
+		
+		s.logger.WithFields(logrus.Fields{
+			"error":          lastError.Error(),
+			"execution_time": executionTime,
+		}).Error("Command sequence execution failed")
+	} else {
+		s.logger.WithFields(logrus.Fields{
+			"execution_time": executionTime,
+		}).Info("Command sequence executed successfully")
+	}
+	
+	return result, nil
 }

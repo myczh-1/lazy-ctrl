@@ -1,10 +1,13 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 
 	"github.com/spf13/viper"
+	"github.com/myczh-1/lazy-ctrl-agent/internal/model"
 )
 
 type Config struct {
@@ -44,9 +47,12 @@ type SecurityConfig struct {
 }
 
 type CommandsConfig struct {
-	ConfigPath   string                 `mapstructure:"config_path"`
-	Commands     map[string]interface{} `mapstructure:"commands"`
-	HotReload    bool                   `mapstructure:"hot_reload"`
+	ConfigPath     string                       `mapstructure:"config_path"`
+	Commands       map[string]interface{}       `mapstructure:"commands"`
+	CommandsV2     []model.Command              `mapstructure:"-"`
+	LegacyCommands model.LegacyCommandConfig    `mapstructure:"-"`
+	HotReload      bool                         `mapstructure:"hot_reload"`
+	Version        string                       `mapstructure:"-"`
 }
 
 type MQTTConfig struct {
@@ -145,17 +151,32 @@ func loadCommands() error {
 		commandsPath = filepath.Join(".", commandsPath)
 	}
 
-	viper.SetConfigFile(commandsPath)
-	if err := viper.ReadInConfig(); err != nil {
-		return fmt.Errorf("failed to read commands config: %w", err)
+	// 读取JSON文件
+	data, err := ioutil.ReadFile(commandsPath)
+	if err != nil {
+		return fmt.Errorf("failed to read commands file: %w", err)
 	}
 
-	commands := make(map[string]interface{})
-	if err := viper.Unmarshal(&commands); err != nil {
-		return fmt.Errorf("failed to unmarshal commands: %w", err)
+	// 尝试解析为新格式
+	var newConfig model.CommandConfig
+	if err := json.Unmarshal(data, &newConfig); err == nil && newConfig.Version != "" {
+		// 新格式
+		globalConfig.Commands.CommandsV2 = newConfig.Commands
+		globalConfig.Commands.Version = newConfig.Version
+		fmt.Printf("Loaded commands config v%s with %d commands\n", newConfig.Version, len(newConfig.Commands))
+		return nil
 	}
 
-	globalConfig.Commands.Commands = commands
+	// 尝试解析为旧格式 (向后兼容)
+	var legacyCommands model.LegacyCommandConfig
+	if err := json.Unmarshal(data, &legacyCommands); err != nil {
+		return fmt.Errorf("failed to parse commands config: %w", err)
+	}
+
+	globalConfig.Commands.LegacyCommands = legacyCommands
+	globalConfig.Commands.Commands = legacyCommands
+	globalConfig.Commands.Version = "1.0"
+	fmt.Printf("Loaded legacy commands config with %d commands\n", len(legacyCommands))
 	return nil
 }
 
@@ -168,6 +189,35 @@ func GetCommands() map[string]interface{} {
 		return make(map[string]interface{})
 	}
 	return globalConfig.Commands.Commands
+}
+
+// GetCommandsV2 获取新格式的命令配置
+func GetCommandsV2() []model.Command {
+	if globalConfig == nil {
+		return []model.Command{}
+	}
+	return globalConfig.Commands.CommandsV2
+}
+
+// GetLegacyCommands 获取旧格式的命令配置
+func GetLegacyCommands() model.LegacyCommandConfig {
+	if globalConfig == nil {
+		return make(model.LegacyCommandConfig)
+	}
+	return globalConfig.Commands.LegacyCommands
+}
+
+// GetCommandsVersion 获取命令配置版本
+func GetCommandsVersion() string {
+	if globalConfig == nil {
+		return "1.0"
+	}
+	return globalConfig.Commands.Version
+}
+
+// IsV2Commands 检查是否使用新版命令格式
+func IsV2Commands() bool {
+	return GetCommandsVersion() != "1.0"
 }
 
 func ReloadCommands() error {

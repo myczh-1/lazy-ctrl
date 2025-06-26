@@ -1,0 +1,225 @@
+{
+  "version": "2.0",
+  "commands": [
+    {
+      "id": "mute",
+      "name": "静音",
+      "description": "切换系统音频静音状态",
+      "category": "音频控制",
+      "icon": "volume-mute",
+      "platforms": {
+        "windows": {
+          "command": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]173)\"",
+          "type": "shell"
+        },
+        "linux": {
+          "command": "amixer set Master mute",
+          "type": "shell"
+        },
+        "darwin": {
+          "command": "osascript -e 'set volume output muted true'",
+          "type": "shell"
+        }
+      },
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 3000
+    },
+    {
+      "id": "unmute",
+      "name": "取消静音",
+      "description": "取消系统音频静音状态",
+      "category": "音频控制",
+      "icon": "volume-up",
+      "platforms": {
+        "windows": {
+          "command": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]173)\"",
+          "type": "shell"
+        },
+        "linux": {
+          "command": "amixer set Master unmute",
+          "type": "shell"
+        },
+        "darwin": {
+          "command": "osascript -e 'set volume output muted false'",
+          "type": "shell"
+        }
+      },
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 3000
+    },
+    {
+      "id": "lock",
+      "name": "锁屏",
+      "description": "锁定计算机屏幕",
+      "category": "系统控制",
+      "icon": "lock",
+      "platforms": {
+        "windows": {
+          "command": "rundll32.exe user32.dll,LockWorkStation",
+          "type": "shell"
+        },
+        "linux": {
+          "command": "xdg-screensaver lock",
+          "type": "shell"
+        },
+        "darwin": {
+          "command": "pmset displaysleepnow",
+          "type": "shell"
+        }
+      },
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 5000,
+      "userId": "local",
+      "deviceId": "pc-01"
+    },
+    {
+      "id": "volume_up",
+      "name": "音量+",
+      "description": "增加系统音量",
+      "category": "音频控制",
+      "icon": "volume-plus",
+      "platforms": {
+        "windows": {
+          "command": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]175)\"",
+          "type": "shell"
+        }
+      },
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 2000
+    },
+    {
+      "id": "volume_down",
+      "name": "音量-",
+      "description": "减少系统音量",
+      "category": "音频控制",
+      "icon": "volume-minus",
+      "platforms": {
+        "windows": {
+          "command": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]174)\"",
+          "type": "shell"
+        }
+      },
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 2000
+    },
+    {
+      "id": "test_win",
+      "name": "Windows测试",
+      "description": "Windows系统测试命令",
+      "category": "测试",
+      "icon": "test",
+      "platforms": {
+        "windows": {
+          "command": "echo Windows test",
+          "type": "shell"
+        }
+      },
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 5000
+    },
+    {
+      "id": "shutdown",
+      "name": "关机",
+      "description": "关闭计算机 (当前为测试模式)",
+      "category": "系统控制",
+      "icon": "power",
+      "platforms": {
+        "linux": {
+          "command": "echo 'Shutdown command received - would execute: sudo shutdown -h now'",
+          "type": "shell"
+        }
+      },
+      "security": {
+        "requirePin": true,
+        "whitelist": true,
+        "adminOnly": true
+      },
+      "timeout": 10000
+    },
+    {
+      "id": "test",
+      "name": "环境测试",
+      "description": "显示系统环境变量PATH",
+      "category": "测试",
+      "icon": "terminal",
+      "platforms": {
+        "windows": {
+          "command": "echo \"${PATH}\"",
+          "type": "shell"
+        },
+        "linux": {
+          "command": "echo \"${PATH}\"",
+          "type": "shell"
+        },
+        "darwin": {
+          "command": "echo \"${PATH}\"",
+          "type": "shell"
+        }
+      },
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 5000
+    },
+    {
+      "id": "sequence_demo",
+      "name": "序列命令演示",
+      "description": "演示多步骤命令序列功能",
+      "category": "演示",
+      "icon": "sequence",
+      "platforms": {
+        "windows": {
+          "commands": [
+            { "type": "shell", "cmd": "echo Starting sequence..." },
+            { "type": "delay", "duration": 1000 },
+            { "type": "shell", "cmd": "echo Step 2: Current time && time /t" },
+            { "type": "delay", "duration": 500 },
+            { "type": "shell", "cmd": "echo Sequence complete!" }
+          ]
+        },
+        "linux": {
+          "commands": [
+            { "type": "shell", "cmd": "echo Starting sequence..." },
+            { "type": "delay", "duration": 1000 },
+            { "type": "shell", "cmd": "echo Step 2: Current time && date" },
+            { "type": "delay", "duration": 500 },
+            { "type": "shell", "cmd": "echo Sequence complete!" }
+          ]
+        },
+        "darwin": {
+          "commands": [
+            { "type": "shell", "cmd": "echo Starting sequence..." },
+            { "type": "delay", "duration": 1000 },
+            { "type": "shell", "cmd": "echo Step 2: Current time && date" },
+            { "type": "delay", "duration": 500 },
+            { "type": "shell", "cmd": "echo Sequence complete!" }
+          ]
+        }
+      },
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 30000
+    }
+  ]
+}
