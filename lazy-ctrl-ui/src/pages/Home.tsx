@@ -4,6 +4,15 @@ import GridLayout, { Layout } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useEditMode } from '../contexts/EditModeContext'
+import { useLayoutManager, CardConfig } from '../hooks/useLayoutManager'
+import layoutAPI from '../api/layoutAPI'
+
+// 默认卡片配置
+const defaultCards: CardConfig[] = [
+    { id: '1', title: '卡片 1', commandId: 'cmd1' },
+    { id: '2', title: '卡片 2', commandId: 'cmd2' },
+    { id: '3', title: '卡片 3', commandId: 'cmd3' },
+]
 
 const initialLayout: Layout[] = [
     { i: '1', x: 0, y: 0, w: 1, h: 2 },
@@ -18,7 +27,17 @@ const SIZES = {
 }
 
 export default function Home() {
-    const [layout, setLayout] = useState<Layout[]>(initialLayout)
+    const {
+        layout,
+        cards,
+        setLayout,
+        handleCardClick,
+        removeCard,
+        createCard,
+        loadLayout,
+        saveLayout
+    } = useLayoutManager(initialLayout, defaultCards)
+    
     const { editMode, setEditMode } = useEditMode()
     const [containerWidth, setContainerWidth] = useState(400)
     const [selectedCard, setSelectedCard] = useState<string | null>(null)
@@ -27,6 +46,52 @@ export default function Home() {
         draggedItem: null
     })
     const containerRef = useRef<HTMLDivElement>(null)
+
+    // 注册 API
+    useEffect(() => {
+        layoutAPI.setLayoutManager({
+            layout,
+            cards,
+            setLayout,
+            handleCardClick,
+            removeCard,
+            createCard,
+            loadLayout,
+            saveLayout,
+            exportLayout: () => ({ layout, cards, timestamp: Date.now() }),
+            importLayout: (data: any) => loadLayout(data.layout, data.cards),
+            loadLayoutFromStorage: () => {
+                const savedData = localStorage.getItem('lazy-ctrl-layout')
+                if (savedData) {
+                    try {
+                        const { layout: savedLayout, cards: savedCards } = JSON.parse(savedData)
+                        if (savedLayout && savedCards) {
+                            loadLayout(savedLayout, savedCards)
+                            return true
+                        }
+                    } catch (error) {
+                        console.error('Failed to load saved layout:', error)
+                    }
+                }
+                return false
+            },
+            executeCommand: async (commandId: string) => {
+                try {
+                    const response = await fetch(`http://localhost:7070/execute?id=${commandId}`)
+                    const result = await response.text()
+                    console.log('Command result:', result)
+                    return result
+                } catch (error) {
+                    console.error('Command execution failed:', error)
+                    throw error
+                }
+            },
+            updateCard: (cardId: string, updates: any) => {
+                // 这里需要添加 updateCard 逻辑
+                console.log('Update card:', cardId, updates)
+            }
+        })
+    }, [layout, cards])
 
     useEffect(() => {
         const updateWidth = () => {
@@ -56,7 +121,7 @@ export default function Home() {
     }
 
     const removeItem = (i: string) => {
-        setLayout(layout.filter((item) => item.i !== i))
+        removeCard(i)
         setSelectedCard(null)
     }
 
@@ -74,8 +139,13 @@ export default function Home() {
         
         // 如果位置没有改变，认为是点击而不是拖拽
         if (wasDragging && draggedItem && oldItem.x === newItem.x && oldItem.y === newItem.y && oldItem.w === newItem.w && oldItem.h === newItem.h) {
-            // 这是一个点击事件，切换选中状态
-            setSelectedCard(selectedCard === draggedItem ? null : draggedItem)
+            if (editMode) {
+                // 编辑模式下切换选中状态
+                setSelectedCard(selectedCard === draggedItem ? null : draggedItem)
+            } else {
+                // 非编辑模式下执行卡片功能
+                handleCardClick(draggedItem)
+            }
         }
     }
 
@@ -112,13 +182,21 @@ export default function Home() {
                     >
                         {/* 卡片内容 */}
                         <div className="flex-1 p-2 text-center text-sm flex flex-col justify-center">
-                            卡片 {item.i}
+                            {(() => {
+                                const card = cards.find(c => c.id === item.i)
+                                return card ? card.title : `卡片 ${item.i}`
+                            })()}
                             {editMode && selectedCard === item.i && (
                                 <div className="text-xs text-blue-500 mt-1">已选中</div>
                             )}
                             {editMode && (
                                 <div className="text-xs text-gray-400 mt-1">
                                     {dragState.isDragging && dragState.draggedItem === item.i ? '拖拽中...' : '点击选择'}
+                                </div>
+                            )}
+                            {!editMode && (
+                                <div className="text-xs text-gray-400 mt-1">
+                                    点击执行
                                 </div>
                             )}
                         </div>
