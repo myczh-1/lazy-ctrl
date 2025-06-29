@@ -28,12 +28,12 @@ const homeRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/Home')),
 })
 
-// // 子页面：Config
-// const configRoute = createRoute({
-//   path: '/config',
-//   getParentRoute: () => layoutRoute,
-//   component: lazyRouteComponent(() => import('@/pages/Config')),
-// })
+// 子页面：Commands
+const commandRoute = createRoute({
+  path: '/commands',
+  getParentRoute: () => layoutRoute,
+  component: lazyRouteComponent(() => import('@/pages/Commands')),
+})
 
 // // 子页面：About
 // const aboutRoute = createRoute({
@@ -45,7 +45,7 @@ const homeRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   layoutRoute.addChildren([
     homeRoute,
-    // configRoute,
+    commandRoute,
     // aboutRoute,
   ]),
 ])

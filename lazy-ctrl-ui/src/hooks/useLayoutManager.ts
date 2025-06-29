@@ -1,22 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Layout } from 'react-grid-layout'
+import type { Layout } from 'react-grid-layout'
+import type { CardConfig, LayoutData, LayoutManagerHook } from '@/types/layout'
 
-export interface CardConfig {
-    id: string
-    title: string
-    action?: () => void
-    commandId?: string
-    icon?: string
-    color?: string
-}
-
-export interface LayoutData {
-    layout: Layout[]
-    cards: CardConfig[]
-    timestamp: number
-}
-
-export function useLayoutManager(initialLayout: Layout[] = [], initialCards: CardConfig[] = []) {
+export function useLayoutManager(initialLayout: Layout[] = [], initialCards: CardConfig[] = []): LayoutManagerHook {
     const [layout, setLayout] = useState<Layout[]>(initialLayout)
     const [cards, setCards] = useState<CardConfig[]>(initialCards)
 

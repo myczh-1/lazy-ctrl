@@ -1,13 +1,16 @@
 // 文件：src/pages/Home.tsx
 import { useState, useEffect, useRef } from 'react'
-import GridLayout, { Layout } from 'react-grid-layout'
+import GridLayout from 'react-grid-layout'
+import type { Layout } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useEditMode } from '../contexts/EditModeContext'
-import { useLayoutManager, CardConfig } from '../hooks/useLayoutManager'
+import { useLayoutManager } from '@/hooks/useLayoutManager'
+import type { CardConfig } from '@/types/layout'
+
 import layoutAPI from '../api/layoutAPI'
 
-// 默认卡片配置
+// 默认卡片配置（仅在没有保存数据时使用）
 const defaultCards: CardConfig[] = [
     { id: '1', title: '卡片 1', commandId: 'cmd1' },
     { id: '2', title: '卡片 2', commandId: 'cmd2' },
@@ -35,8 +38,10 @@ export default function Home() {
         removeCard,
         createCard,
         loadLayout,
-        saveLayout
-    } = useLayoutManager(initialLayout, defaultCards)
+        saveLayout,
+        loadLayoutFromStorage,
+        updateCard
+    } = useLayoutManager([], [])  // 空初始值，让hook从localStorage加载
     
     const { editMode, setEditMode } = useEditMode()
     const [containerWidth, setContainerWidth] = useState(400)
@@ -86,12 +91,21 @@ export default function Home() {
                     throw error
                 }
             },
-            updateCard: (cardId: string, updates: any) => {
-                // 这里需要添加 updateCard 逻辑
-                console.log('Update card:', cardId, updates)
-            }
+            updateCard: updateCard
         })
     }, [layout, cards])
+
+    // 初始化布局数据
+    useEffect(() => {
+        // 如果没有布局数据，尝试从localStorage加载，失败则使用默认配置
+        if (layout.length === 0 && cards.length === 0) {
+            const hasStoredData = loadLayoutFromStorage()
+            if (!hasStoredData) {
+                // 没有存储数据，使用默认配置
+                loadLayout(initialLayout, defaultCards)
+            }
+        }
+    }, [])
 
     useEffect(() => {
         const updateWidth = () => {
