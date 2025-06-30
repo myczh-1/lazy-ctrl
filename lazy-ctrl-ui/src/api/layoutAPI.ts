@@ -1,5 +1,5 @@
-import { Layout } from 'react-grid-layout'
-import { CardConfig, LayoutData } from '../hooks/useLayoutManager'
+import type { Layout } from 'react-grid-layout'
+import type { CardConfig, LayoutData } from '@/types/layout'
 
 export class LayoutAPI {
     private static instance: LayoutAPI
