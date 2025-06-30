@@ -18,6 +18,7 @@ type Command struct {
 	Timeout     int                    `json:"timeout,omitempty"`
 	UserID      string                 `json:"userId,omitempty"`
 	DeviceID    string                 `json:"deviceId,omitempty"`
+	Homepage    *HomepageConfig        `json:"homepage,omitempty"`
 }
 
 // SecurityConfig 安全配置
@@ -25,6 +26,16 @@ type SecurityConfig struct {
 	RequirePin bool `json:"requirePin"`
 	Whitelist  bool `json:"whitelist"`
 	AdminOnly  bool `json:"adminOnly,omitempty"`
+}
+
+// HomepageConfig 首页展示配置
+type HomepageConfig struct {
+	ShowOnHomepage bool `json:"showOnHomepage"`
+	X              int  `json:"x,omitempty"`
+	Y              int  `json:"y,omitempty"`
+	Width          int  `json:"width,omitempty"`
+	Height         int  `json:"height,omitempty"`
+	Color          string `json:"color,omitempty"`
 }
 
 // PlatformCommand 平台特定命令配置
@@ -41,8 +52,6 @@ type CommandStep struct {
 	Duration int    `json:"duration,omitempty"`
 }
 
-// LegacyCommandConfig 旧版命令配置 (向后兼容)
-type LegacyCommandConfig map[string]interface{}
 
 // GetTimeout 获取命令超时时间，如果未设置则返回默认值
 func (c *Command) GetTimeout() int {
@@ -74,4 +83,41 @@ func (c *Command) RequiresAdmin() bool {
 		return false
 	}
 	return c.Security.AdminOnly
+}
+
+// ShowOnHomepage 检查命令是否在首页显示
+func (c *Command) ShowOnHomepage() bool {
+	if c.Homepage == nil {
+		return false
+	}
+	return c.Homepage.ShowOnHomepage
+}
+
+// GetHomepagePosition 获取首页位置信息
+func (c *Command) GetHomepagePosition() (x, y, width, height int) {
+	if c.Homepage == nil {
+		return 0, 0, 1, 1 // 默认大小
+	}
+	x = c.Homepage.X
+	y = c.Homepage.Y
+	width = c.Homepage.Width
+	height = c.Homepage.Height
+	
+	// 设置默认值
+	if width <= 0 {
+		width = 1
+	}
+	if height <= 0 {
+		height = 1
+	}
+	
+	return x, y, width, height
+}
+
+// GetHomepageColor 获取首页卡片颜色
+func (c *Command) GetHomepageColor() string {
+	if c.Homepage == nil || c.Homepage.Color == "" {
+		return ""
+	}
+	return c.Homepage.Color
 }

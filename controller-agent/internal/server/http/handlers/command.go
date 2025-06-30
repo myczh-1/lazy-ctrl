@@ -32,46 +32,50 @@ func NewCommandHandler(commandService *command.Service) *CommandHandler {
 //	@Security		PinAuth
 //	@Router			/commands [get]
 func (h *CommandHandler) HandleListCommands(c *gin.Context) {
-	if config.IsV2Commands() {
-		// 新格式命令
-		commandsV2 := config.GetCommandsV2()
-		commandList := make([]gin.H, 0, len(commandsV2))
-		
-		for _, cmd := range commandsV2 {
-			commandInfo := gin.H{
-				"id":          cmd.ID,
-				"name":        cmd.Name,
-				"description": cmd.Description,
-				"category":    cmd.Category,
-				"icon":        cmd.Icon,
-				"timeout":     cmd.GetTimeout(),
-				"requiresPin": cmd.RequiresPin(),
-				"whitelisted": cmd.IsWhitelisted(),
-			}
-			
-			// 获取当前平台的命令详情
-			if platformCmd, ok := h.commandService.GetPlatformCommand(&cmd); ok {
-				commandInfo["available"] = true
-				commandInfo["command"] = platformCmd
-			} else {
-				commandInfo["available"] = false
-			}
-			
-			commandList = append(commandList, commandInfo)
+	commands := config.GetCommands()
+	commandList := make([]gin.H, 0, len(commands))
+	
+	for _, cmd := range commands {
+		commandInfo := gin.H{
+			"id":          cmd.ID,
+			"name":        cmd.Name,
+			"description": cmd.Description,
+			"category":    cmd.Category,
+			"icon":        cmd.Icon,
+			"timeout":     cmd.GetTimeout(),
+			"requiresPin": cmd.RequiresPin(),
+			"whitelisted": cmd.IsWhitelisted(),
+			"available":   cmd.IsWhitelisted(),
 		}
 		
-		c.JSON(http.StatusOK, gin.H{
-			"version":  config.GetCommandsVersion(),
-			"commands": commandList,
-		})
-	} else {
-		// 旧格式命令
-		commands := h.commandService.GetAllCommands()
-		c.JSON(http.StatusOK, gin.H{
-			"version":  "1.0",
-			"commands": commands,
-		})
+		// 添加首页相关信息
+		commandInfo["showOnHomepage"] = cmd.ShowOnHomepage()
+		if cmd.Homepage != nil {
+			x, y, width, height := cmd.GetHomepagePosition()
+			commandInfo["homepagePosition"] = gin.H{
+				"x": x,
+				"y": y,
+				"width": width,
+				"height": height,
+			}
+			commandInfo["homepageColor"] = cmd.GetHomepageColor()
+		}
+		
+		// 获取当前平台的命令详情
+		if platformCmd, ok := h.commandService.GetPlatformCommand(&cmd); ok {
+			commandInfo["available"] = true
+			commandInfo["command"] = platformCmd
+		} else {
+			commandInfo["available"] = false
+		}
+		
+		commandList = append(commandList, commandInfo)
 	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"version":  config.GetCommandsVersion(),
+		"commands": commandList,
+	})
 }
 
 // HandleReloadConfig reloads the command configuration

@@ -1,0 +1,150 @@
+{
+  "version": "3.0",
+  "commands": [
+    {
+      "id": "mute_cmd_001",
+      "name": "静音",
+      "description": "切换系统音频静音状态",
+      "icon": "volume-mute",
+      "category": "音频控制",
+      "command": "osascript -e 'set volume output muted true'",
+      "platform": "darwin",
+      "timeout": 3000,
+      "security": {
+        "requirePin": false,
+        "adminOnly": false
+      },
+      "templateId": "mute",
+      "templateParams": {},
+      "homeLayout": {
+        "showOnHome": true,
+        "defaultPosition": {
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        "color": "#ff6b6b",
+        "priority": 1
+      },
+      "createdAt": "2024-06-30T00:00:00Z",
+      "updatedAt": "2024-06-30T00:00:00Z"
+    },
+    {
+      "id": "unmute_cmd_002",
+      "name": "取消静音",
+      "description": "取消系统音频静音状态",
+      "icon": "volume-up",
+      "category": "音频控制",
+      "command": "osascript -e 'set volume output muted false'",
+      "platform": "darwin",
+      "timeout": 3000,
+      "security": {
+        "requirePin": false,
+        "adminOnly": false
+      },
+      "templateId": "unmute",
+      "templateParams": {},
+      "homeLayout": {
+        "showOnHome": true,
+        "defaultPosition": {
+          "x": 1,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        "color": "#51cf66",
+        "priority": 2
+      },
+      "createdAt": "2024-06-30T00:00:00Z",
+      "updatedAt": "2024-06-30T00:00:00Z"
+    },
+    {
+      "id": "lock_cmd_003",
+      "name": "锁屏",
+      "description": "锁定计算机屏幕",
+      "icon": "lock",
+      "category": "系统控制",
+      "command": "pmset displaysleepnow",
+      "platform": "darwin",
+      "timeout": 5000,
+      "security": {
+        "requirePin": false,
+        "adminOnly": false
+      },
+      "templateId": "lock",
+      "templateParams": {},
+      "homeLayout": {
+        "showOnHome": true,
+        "defaultPosition": {
+          "x": 2,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        "color": "#ffd43b",
+        "priority": 3
+      },
+      "createdAt": "2024-06-30T00:00:00Z",
+      "updatedAt": "2024-06-30T00:00:00Z"
+    },
+    {
+      "id": "volume_up_cmd_004",
+      "name": "音量+",
+      "description": "增加系统音量",
+      "icon": "volume-plus",
+      "category": "音频控制",
+      "command": "osascript -e 'set volume output volume (output volume of (get volume settings) + 10)'",
+      "platform": "darwin",
+      "timeout": 2000,
+      "security": {
+        "requirePin": false,
+        "adminOnly": false
+      },
+      "templateId": "volume_up",
+      "templateParams": {},
+      "homeLayout": {
+        "showOnHome": false,
+        "defaultPosition": {
+          "x": 0,
+          "y": 1,
+          "w": 1,
+          "h": 1
+        },
+        "color": "#339af0",
+        "priority": 4
+      },
+      "createdAt": "2024-06-30T00:00:00Z",
+      "updatedAt": "2024-06-30T00:00:00Z"
+    },
+    {
+      "id": "custom_project_cmd_005",
+      "name": "打开我的项目",
+      "description": "在VS Code中打开当前项目",
+      "icon": "folder",
+      "category": "开发工具",
+      "command": "code /Volumes/WorkDisk/WorkDocuments/project/FULL/lazy-ctrl",
+      "platform": "darwin",
+      "timeout": 10000,
+      "security": {
+        "requirePin": false,
+        "adminOnly": false
+      },
+      "templateId": null,
+      "templateParams": {},
+      "homeLayout": {
+        "showOnHome": true,
+        "defaultPosition": {
+          "x": 3,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        "color": "#845ec2",
+        "priority": 5
+      },
+      "createdAt": "2024-06-30T00:00:00Z",
+      "updatedAt": "2024-06-30T00:00:00Z"
+    }
+  ]
+}

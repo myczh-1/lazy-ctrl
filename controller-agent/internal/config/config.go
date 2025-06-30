@@ -47,12 +47,10 @@ type SecurityConfig struct {
 }
 
 type CommandsConfig struct {
-	ConfigPath     string                       `mapstructure:"config_path"`
-	Commands       map[string]interface{}       `mapstructure:"commands"`
-	CommandsV2     []model.Command              `mapstructure:"-"`
-	LegacyCommands model.LegacyCommandConfig    `mapstructure:"-"`
-	HotReload      bool                         `mapstructure:"hot_reload"`
-	Version        string                       `mapstructure:"-"`
+	ConfigPath string          `mapstructure:"config_path"`
+	Commands   []model.Command `mapstructure:"-"`
+	HotReload  bool            `mapstructure:"hot_reload"`
+	Version    string          `mapstructure:"-"`
 }
 
 type MQTTConfig struct {
@@ -157,26 +155,19 @@ func loadCommands() error {
 		return fmt.Errorf("failed to read commands file: %w", err)
 	}
 
-	// 尝试解析为新格式
-	var newConfig model.CommandConfig
-	if err := json.Unmarshal(data, &newConfig); err == nil && newConfig.Version != "" {
-		// 新格式
-		globalConfig.Commands.CommandsV2 = newConfig.Commands
-		globalConfig.Commands.Version = newConfig.Version
-		fmt.Printf("Loaded commands config v%s with %d commands\n", newConfig.Version, len(newConfig.Commands))
-		return nil
-	}
-
-	// 尝试解析为旧格式 (向后兼容)
-	var legacyCommands model.LegacyCommandConfig
-	if err := json.Unmarshal(data, &legacyCommands); err != nil {
+	// 解析命令配置
+	var config model.CommandConfig
+	if err := json.Unmarshal(data, &config); err != nil {
 		return fmt.Errorf("failed to parse commands config: %w", err)
 	}
 
-	globalConfig.Commands.LegacyCommands = legacyCommands
-	globalConfig.Commands.Commands = legacyCommands
-	globalConfig.Commands.Version = "1.0"
-	fmt.Printf("Loaded legacy commands config with %d commands\n", len(legacyCommands))
+	if config.Version == "" {
+		return fmt.Errorf("missing version in commands config")
+	}
+
+	globalConfig.Commands.Commands = config.Commands
+	globalConfig.Commands.Version = config.Version
+	fmt.Printf("Loaded commands config v%s with %d commands\n", config.Version, len(config.Commands))
 	return nil
 }
 
@@ -184,40 +175,24 @@ func Get() *Config {
 	return globalConfig
 }
 
-func GetCommands() map[string]interface{} {
+func GetCommands() []model.Command {
 	if globalConfig == nil {
-		return make(map[string]interface{})
+		return []model.Command{}
 	}
 	return globalConfig.Commands.Commands
 }
 
-// GetCommandsV2 获取新格式的命令配置
+// GetCommandsV2 为了向后兼容保留这个方法
 func GetCommandsV2() []model.Command {
-	if globalConfig == nil {
-		return []model.Command{}
-	}
-	return globalConfig.Commands.CommandsV2
-}
-
-// GetLegacyCommands 获取旧格式的命令配置
-func GetLegacyCommands() model.LegacyCommandConfig {
-	if globalConfig == nil {
-		return make(model.LegacyCommandConfig)
-	}
-	return globalConfig.Commands.LegacyCommands
+	return GetCommands()
 }
 
 // GetCommandsVersion 获取命令配置版本
 func GetCommandsVersion() string {
 	if globalConfig == nil {
-		return "1.0"
+		return "3.0"
 	}
 	return globalConfig.Commands.Version
-}
-
-// IsV2Commands 检查是否使用新版命令格式
-func IsV2Commands() bool {
-	return GetCommandsVersion() != "1.0"
 }
 
 func ReloadCommands() error {

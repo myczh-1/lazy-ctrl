@@ -160,12 +160,12 @@ func (s *Server) ListCommands(ctx context.Context, req *pb.ListCommandsRequest) 
 	commands := s.commandService.GetAllCommands()
 	var commandInfos []*pb.CommandInfo
 
-	for id, cmd := range commands {
-		platformCmd, supported := s.commandService.GetPlatformCommand(cmd)
+	for _, cmd := range commands {
+		platformCmd, supported := s.commandService.GetPlatformCommand(&cmd)
 		
 		commandInfos = append(commandInfos, &pb.CommandInfo{
-			Id:               id,
-			Description:      fmt.Sprintf("Command: %s", id),
+			Id:               cmd.ID,
+			Description:      fmt.Sprintf("Command: %s", cmd.ID),
 			PlatformSupported: supported,
 			PlatformCommand:  platformCmd,
 		})
