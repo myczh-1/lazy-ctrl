@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
+import { useLayoutStore } from '@/stores/layoutStore'
 
 interface EditModeContextType {
   editMode: boolean
@@ -9,8 +10,8 @@ interface EditModeContextType {
 const EditModeContext = createContext<EditModeContextType | undefined>(undefined)
 
 export function EditModeProvider({ children }: { children: ReactNode }) {
-  const [editMode, setEditMode] = useState(false)
-
+  const { editMode, setEditMode } = useLayoutStore()
+  
   const toggleEditMode = () => setEditMode(!editMode)
 
   return (

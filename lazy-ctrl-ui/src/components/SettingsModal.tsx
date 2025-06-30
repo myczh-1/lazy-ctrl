@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useCommandAPI } from '@/hooks/useCommandAPI'
+import { useCommandStore } from '@/stores/commandStore'
+import { useAppStore } from '@/stores/appStore'
+import { CommandService } from '@/services/commandService'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -7,41 +9,35 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { setPin, refreshCommands, commands } = useCommandAPI()
+  const { commands } = useCommandStore()
+  const { apiBaseUrl, setApiBaseUrl, saveSettings } = useAppStore()
   const [pinValue, setPinValue] = useState('')
-  const [apiBaseUrl, setApiBaseUrl] = useState(
-    import.meta.env.DEV ? '/api' : 'http://localhost:7070'
-  )
   const [showPin, setShowPin] = useState(false)
 
   // 从localStorage加载设置
   useEffect(() => {
     const savedPin = localStorage.getItem('lazy-ctrl-pin')
-    const savedApiUrl = localStorage.getItem('lazy-ctrl-api-url')
-    
     if (savedPin) setPinValue(savedPin)
-    if (savedApiUrl) setApiBaseUrl(savedApiUrl)
   }, [])
 
   const handleSave = () => {
-    // 保存到localStorage
-    localStorage.setItem('lazy-ctrl-pin', pinValue)
-    localStorage.setItem('lazy-ctrl-api-url', apiBaseUrl)
-    
     // 设置PIN
     if (pinValue) {
-      setPin(pinValue)
+      CommandService.setPin(pinValue)
     }
     
+    // 保存应用设置
+    saveSettings()
+    
     // 重新加载命令
-    refreshCommands()
+    CommandService.fetchCommands()
     
     onClose()
   }
 
   const handleTestConnection = async () => {
     try {
-      await refreshCommands()
+      await CommandService.fetchCommands()
       alert('连接成功！')
     } catch (error) {
       alert(`连接失败: ${error instanceof Error ? error.message : '未知错误'}`)

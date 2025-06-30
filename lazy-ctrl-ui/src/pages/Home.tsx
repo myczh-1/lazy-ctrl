@@ -1,144 +1,63 @@
-// 文件：src/pages/Home.tsx
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import GridLayout from 'react-grid-layout'
 import type { Layout } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
-import { useEditMode } from '../contexts/EditModeContext'
-import { useLayoutManager } from '@/hooks/useLayoutManager'
-import { useCommandAPI } from '@/hooks/useCommandAPI'
-import type { CardConfig } from '@/types/layout'
-import { CommandStatus } from '@/api/commandAPI'
 
-import layoutAPI from '../api/layoutAPI'
-import { SettingsModal } from '../components/SettingsModal'
-
-// 默认卡片配置（仅在没有保存数据时使用）
-const defaultCards: CardConfig[] = [
-    { id: '1', title: '卡片 1', commandId: 'cmd1' },
-    { id: '2', title: '卡片 2', commandId: 'cmd2' },
-    { id: '3', title: '卡片 3', commandId: 'cmd3' },
-]
-
-const initialLayout: Layout[] = [
-    { i: '1', x: 0, y: 0, w: 1, h: 2 },
-    { i: '2', x: 1, y: 0, w: 1, h: 1 },
-    { i: '3', x: 2, y: 0, w: 2, h: 2 },
-]
-
-const SIZES = {
-    small: { w: 1, h: 1 },
-    medium: { w: 2, h: 2 },
-    large: { w: 3, h: 3 },
-}
+import { useCommandStore } from '@/stores/commandStore'
+import { useLayoutStore } from '@/stores/layoutStore'
+import { useAppStore } from '@/stores/appStore'
+import { CommandService } from '@/services/commandService'
+import { LayoutService } from '@/services/layoutService'
+import { SettingsModal } from '@/components/SettingsModal'
 
 export default function Home() {
-    // 后端 API 状态
-    const {
-        commands,
-        isLoading,
-        error,
-        executionState,
-        executeCommand,
-        getAvailableCards,
-        refreshCommands
-    } = useCommandAPI()
-    
-    // 布局管理
-    const {
-        layout,
-        cards,
+    // 状态管理
+    const { commands, isLoading, error, executionState } = useCommandStore()
+    const { 
+        layout, 
+        cards, 
+        editMode, 
+        selectedCard,
         setLayout,
-        handleCardClick,
-        removeCard,
-        createCard,
-        loadLayout,
-        saveLayout,
-        loadLayoutFromStorage,
-        updateCard
-    } = useLayoutManager([], [])  // 空初始值，让hook从localStorage加载
+        setEditMode,
+        setSelectedCard 
+    } = useLayoutStore()
+    const { showSettings, setShowSettings } = useAppStore()
     
-    const { editMode, setEditMode } = useEditMode()
+    // 本地状态
     const [containerWidth, setContainerWidth] = useState(400)
-    const [selectedCard, setSelectedCard] = useState<string | null>(null)
     const [dragState, setDragState] = useState<{ isDragging: boolean; draggedItem: string | null }>({
         isDragging: false,
         draggedItem: null
     })
-    const [showSettings, setShowSettings] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
 
-    // 注册 API
+    // 初始化
     useEffect(() => {
-        layoutAPI.setLayoutManager({
-            layout,
-            cards,
-            setLayout,
-            handleCardClick,
-            removeCard,
-            createCard,
-            loadLayout,
-            saveLayout,
-            exportLayout: () => ({ layout, cards, timestamp: Date.now() }),
-            importLayout: (data: any) => loadLayout(data.layout, data.cards),
-            loadLayoutFromStorage: () => {
-                const savedData = localStorage.getItem('lazy-ctrl-layout')
-                if (savedData) {
-                    try {
-                        const { layout: savedLayout, cards: savedCards } = JSON.parse(savedData)
-                        if (savedLayout && savedCards) {
-                            loadLayout(savedLayout, savedCards)
-                            return true
-                        }
-                    } catch (error) {
-                        console.error('Failed to load saved layout:', error)
-                    }
-                }
-                return false
-            },
-            executeCommand: async (commandId: string) => {
-                await executeCommand(commandId)
-                return 'Command executed via API'
-            },
-            updateCard: updateCard
-        })
-    }, [layout, cards])
+        // 加载应用设置
+        useAppStore.getState().loadSettings()
+        
+        // 加载 PIN
+        CommandService.loadPin()
+        
+        // 获取命令列表
+        CommandService.fetchCommands()
+    }, [])
 
-    // 初始化布局数据
+    // 初始化布局
     useEffect(() => {
-        // 如果没有布局数据，尝试从localStorage加载
-        if (layout.length === 0 && cards.length === 0) {
-            const hasStoredData = loadLayoutFromStorage()
-            if (!hasStoredData) {
-                // 没有存储数据，检查是否有后端命令
-                if (commands.length > 0) {
-                    // 使用后端命令创建默认布局
-                    const availableCards = getAvailableCards()
-                    if (availableCards.length > 0) {
-                        const defaultLayout = availableCards.slice(0, 6).map((card, index) => ({
-                            i: card.id,
-                            x: (index % 4),
-                            y: Math.floor(index / 4),
-                            w: 1,
-                            h: 1
-                        }))
-                        loadLayout(defaultLayout, availableCards)
-                        console.log('Initialized layout with backend commands:', availableCards.length)
-                    }
-                } else if (!isLoading) {
-                    // 后端没有可用命令且不在加载中，使用静态默认配置
-                    loadLayout(initialLayout, defaultCards)
-                    console.log('Initialized layout with default cards')
-                }
-            }
+        if (!isLoading && commands.length > 0) {
+            LayoutService.initializeLayout()
         }
-    }, [commands, layout.length, cards.length, isLoading])
+    }, [commands, isLoading])
 
+    // 响应式容器宽度
     useEffect(() => {
         const updateWidth = () => {
             if (containerRef.current) {
                 const width = containerRef.current.offsetWidth
-                setContainerWidth(width - 16) // 减去 padding
+                setContainerWidth(width - 16)
             }
         }
 
@@ -152,48 +71,63 @@ export default function Home() {
         if (!editMode) {
             setSelectedCard(null)
         }
-    }, [editMode])
+    }, [editMode, setSelectedCard])
 
-    const changeSize = (i: string, sizeKey: keyof typeof SIZES) => {
-        const newLayout = layout.map((item) =>
-            item.i === i ? { ...item, ...SIZES[sizeKey] } : item
-        )
-        setLayout(newLayout)
-    }
-
-    const removeItem = (i: string) => {
-        removeCard(i)
-        setSelectedCard(null)
-    }
-
-    // 拖拽开始
-
-    const handleDragStart = (_layout: Layout[], oldItem: Layout, _newItem: Layout, _placeholder: Layout, _e: MouseEvent, _element: HTMLElement) => {
+    // 拖拽处理
+    const handleDragStart = (_layout: Layout[], oldItem: Layout) => {
         setDragState({ isDragging: true, draggedItem: oldItem.i })
     }
 
-    // 拖拽结束
-    const handleDragStop = (_layout: Layout[], oldItem: Layout, newItem: Layout, _placeholder: Layout, _e: MouseEvent, _element: HTMLElement) => {
+    const handleDragStop = (_layout: Layout[], oldItem: Layout, newItem: Layout) => {
         const wasDragging = dragState.isDragging
         const draggedItem = dragState.draggedItem
         
         setDragState({ isDragging: false, draggedItem: null })
         
         // 如果位置没有改变，认为是点击而不是拖拽
-        if (wasDragging && draggedItem && oldItem.x === newItem.x && oldItem.y === newItem.y && oldItem.w === newItem.w && oldItem.h === newItem.h) {
-            if (editMode) {
-                // 编辑模式下切换选中状态
-                setSelectedCard(selectedCard === draggedItem ? null : draggedItem)
-            } else {
-                // 非编辑模式下执行卡片功能
-                const card = cards.find(c => c.id === draggedItem)
-                if (card && card.commandId) {
-                    executeCommand(card.commandId)
-                } else {
-                    handleCardClick(draggedItem)
-                }
-            }
+        if (wasDragging && draggedItem && 
+            oldItem.x === newItem.x && oldItem.y === newItem.y && 
+            oldItem.w === newItem.w && oldItem.h === newItem.h) {
+            LayoutService.handleCardClick(draggedItem)
         }
+    }
+
+    // 工具函数
+    const handleRefresh = () => {
+        CommandService.fetchCommands()
+    }
+
+    const handleReset = () => {
+        LayoutService.resetLayout()
+    }
+
+    const handleSizeChange = (size: 'small' | 'medium' | 'large') => {
+        if (selectedCard) {
+            LayoutService.changeCardSize(selectedCard, size)
+        }
+    }
+
+    const handleRemoveCard = () => {
+        if (selectedCard) {
+            useLayoutStore.getState().removeCard(selectedCard)
+            LayoutService.saveLayout()
+        }
+    }
+
+    // 渲染卡片图标
+    const renderCardIcon = (icon?: string) => {
+        const iconMap: Record<string, string> = {
+            'volume-mute': '🔇',
+            'volume-up': '🔊',
+            'lock': '🔒',
+            'volume-plus': '🔊+',
+            'volume-minus': '🔊-',
+            'test': '🧪',
+            'power': '⚡',
+            'terminal': '💻',
+            'sequence': '🔄'
+        }
+        return iconMap[icon || ''] || '📱'
     }
 
     return (
@@ -214,7 +148,7 @@ export default function Home() {
                     <div className="flex items-center justify-between">
                         <span className="text-red-700">错误: {error}</span>
                         <button 
-                            onClick={refreshCommands}
+                            onClick={handleRefresh}
                             className="text-red-600 hover:text-red-800 underline text-sm"
                         >
                             重试
@@ -223,8 +157,8 @@ export default function Home() {
                 </div>
             )}
             
-            {/* 执行状态 */}
-            {executionState.status === CommandStatus.EXECUTING && (
+            {/* 执行状态提示 */}
+            {executionState.status === 'executing' && (
                 <div className="fixed top-4 right-4 p-3 bg-blue-50 border border-blue-200 rounded-md shadow-lg z-50">
                     <div className="flex items-center">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
@@ -233,7 +167,7 @@ export default function Home() {
                 </div>
             )}
             
-            {executionState.status === CommandStatus.SUCCESS && (
+            {executionState.status === 'success' && (
                 <div className="fixed top-4 right-4 p-3 bg-green-50 border border-green-200 rounded-md shadow-lg z-50">
                     <div className="text-green-700">
                         <div className="font-medium">命令执行成功</div>
@@ -246,7 +180,7 @@ export default function Home() {
                 </div>
             )}
             
-            {executionState.status === CommandStatus.ERROR && (
+            {executionState.status === 'error' && (
                 <div className="fixed top-4 right-4 p-3 bg-red-50 border border-red-200 rounded-md shadow-lg z-50">
                     <div className="text-red-700">
                         <div className="font-medium">命令执行失败</div>
@@ -276,19 +210,16 @@ export default function Home() {
                     </button>
                     
                     <button
-                        onClick={refreshCommands}
+                        onClick={handleRefresh}
                         className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
                         title="刷新命令"
                         disabled={isLoading}
                     >
-                        {isLoading ? '🔄' : '🔄'}
+                        🔄
                     </button>
                     
                     <button
-                        onClick={() => {
-                            localStorage.removeItem('lazy-ctrl-layout')
-                            window.location.reload()
-                        }}
+                        onClick={handleReset}
                         className="px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:bg-red-50 rounded border border-red-200 transition-colors"
                         title="重置布局"
                     >
@@ -308,7 +239,7 @@ export default function Home() {
                 </div>
             </div>
 
-
+            {/* 网格布局 */}
             <div className="grid-layout-container">
                 <GridLayout
                     className={`layout select-none ${editMode ? 'touch-none' : ''}`}
@@ -318,98 +249,82 @@ export default function Home() {
                     width={containerWidth}
                     isDraggable={editMode}
                     isResizable={editMode}
-                    onLayoutChange={(l) => setLayout(l)}
+                    onLayoutChange={setLayout}
                     onDragStart={handleDragStart}
                     onDragStop={handleDragStop}
                     style={editMode ? { WebkitTouchCallout: 'none' } : {}}
                 >
-                {layout.map((item) => (
-                    <div
-                        key={item.i}
-                        className={`bg-white rounded-md border shadow-md flex flex-col relative transition-all ${
-                            (() => {
-                                const card = cards.find(c => c.id === item.i)
-                                return card?.available === false ? 'opacity-50 ' : ''
-                            })()
-                        }${
-                            editMode && selectedCard === item.i 
-                                ? 'border-blue-400 border-2 shadow-lg' 
-                                : 'border-gray-300'
-                        }`}
-                        onContextMenu={(e) => {
-                            e.preventDefault()
-                            setEditMode(true)
-                        }}
-                    >
-                        {/* 卡片内容 */}
-                        <div className="flex-1 p-2 text-center text-sm flex flex-col justify-center">
-                            {(() => {
-                                const card = cards.find(c => c.id === item.i)
-                                return (
-                                    <div>
-                                        {/* 卡片图标 */}
-                                        {card?.icon && (
-                                            <div className="text-lg mb-1">
-                                                {card.icon === 'volume-mute' && '🔇'}
-                                                {card.icon === 'volume-up' && '🔊'}
-                                                {card.icon === 'lock' && '🔒'}
-                                                {card.icon === 'volume-plus' && '🔊+'}
-                                                {card.icon === 'volume-minus' && '🔊-'}
-                                                {card.icon === 'test' && '🧪'}
-                                                {card.icon === 'power' && '⚡'}
-                                                {card.icon === 'terminal' && '💻'}
-                                                {card.icon === 'sequence' && '🔄'}
-                                            </div>
-                                        )}
-                                        
-                                        {/* 卡片标题 */}
-                                        <div className="font-medium">
-                                            {card ? card.title : `卡片 ${item.i}`}
+                    {layout.map((item) => {
+                        const card = cards.find(c => c.id === item.i)
+                        
+                        return (
+                            <div
+                                key={item.i}
+                                className={`bg-white rounded-md border shadow-md flex flex-col relative transition-all ${
+                                    card?.available === false ? 'opacity-50 ' : ''
+                                }${
+                                    editMode && selectedCard === item.i 
+                                        ? 'border-blue-400 border-2 shadow-lg' 
+                                        : 'border-gray-300'
+                                }`}
+                                onContextMenu={(e) => {
+                                    e.preventDefault()
+                                    setEditMode(true)
+                                }}
+                            >
+                                {/* 卡片内容 */}
+                                <div className="flex-1 p-2 text-center text-sm flex flex-col justify-center">
+                                    {/* 卡片图标 */}
+                                    {card?.icon && (
+                                        <div className="text-lg mb-1">
+                                            {renderCardIcon(card.icon)}
                                         </div>
-                                        
-                                        {/* 卡片描述 */}
-                                        {card?.description && !editMode && (
-                                            <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                                {card.description}
-                                            </div>
-                                        )}
-                                        
-                                        {/* 类别标签 */}
-                                        {card?.category && !editMode && (
-                                            <div className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded mt-1">
-                                                {card.category}
-                                            </div>
-                                        )}
-                                        
-                                        {/* PIN 要求指示 */}
-                                        {card?.requiresPin && !editMode && (
-                                            <div className="text-xs text-orange-500 mt-1">
-                                                🔐 需要PIN
-                                            </div>
-                                        )}
-                                        
-                                        {/* 编辑模式状态 */}
-                                        {editMode && selectedCard === item.i && (
-                                            <div className="text-xs text-blue-500 mt-1">已选中</div>
-                                        )}
-                                        {editMode && (
-                                            <div className="text-xs text-gray-400 mt-1">
-                                                {dragState.isDragging && dragState.draggedItem === item.i ? '拖拽中...' : '点击选择'}
-                                            </div>
-                                        )}
-                                        
-                                        {/* 非编辑模式状态 */}
-                                        {!editMode && (
-                                            <div className="text-xs text-gray-400 mt-1">
-                                                {card?.available !== false ? '点击执行' : '不可用'}
-                                            </div>
-                                        )}
+                                    )}
+                                    
+                                    {/* 卡片标题 */}
+                                    <div className="font-medium">
+                                        {card ? card.title : `卡片 ${item.i}`}
                                     </div>
-                                )
-                            })()}
-                        </div>
-                    </div>
-                ))}
+                                    
+                                    {/* 卡片描述 */}
+                                    {card?.description && !editMode && (
+                                        <div className="text-xs text-gray-500 mt-1 line-clamp-2">
+                                            {card.description}
+                                        </div>
+                                    )}
+                                    
+                                    {/* 类别标签 */}
+                                    {card?.category && !editMode && (
+                                        <div className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded mt-1">
+                                            {card.category}
+                                        </div>
+                                    )}
+                                    
+                                    {/* PIN 要求指示 */}
+                                    {card?.requiresPin && !editMode && (
+                                        <div className="text-xs text-orange-500 mt-1">
+                                            🔐 需要PIN
+                                        </div>
+                                    )}
+                                    
+                                    {/* 状态提示 */}
+                                    {editMode && selectedCard === item.i && (
+                                        <div className="text-xs text-blue-500 mt-1">已选中</div>
+                                    )}
+                                    {editMode && selectedCard !== item.i && (
+                                        <div className="text-xs text-gray-400 mt-1">
+                                            {dragState.isDragging && dragState.draggedItem === item.i ? '拖拽中...' : '点击选择'}
+                                        </div>
+                                    )}
+                                    {!editMode && (
+                                        <div className="text-xs text-gray-400 mt-1">
+                                            {card?.available !== false ? '点击执行' : '不可用'}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    })}
                 </GridLayout>
             </div>
 
@@ -422,25 +337,25 @@ export default function Home() {
                     <div className="flex justify-around">
                         <button 
                             className="px-4 py-2 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200 transition-colors"
-                            onClick={() => changeSize(selectedCard, 'small')}
+                            onClick={() => handleSizeChange('small')}
                         >
                             小尺寸
                         </button>
                         <button 
                             className="px-4 py-2 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200 transition-colors"
-                            onClick={() => changeSize(selectedCard, 'medium')}
+                            onClick={() => handleSizeChange('medium')}
                         >
                             中尺寸
                         </button>
                         <button 
                             className="px-4 py-2 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200 transition-colors"
-                            onClick={() => changeSize(selectedCard, 'large')}
+                            onClick={() => handleSizeChange('large')}
                         >
                             大尺寸
                         </button>
                         <button
                             className="px-4 py-2 bg-red-100 text-red-600 rounded-md hover:bg-red-200 transition-colors"
-                            onClick={() => removeItem(selectedCard)}
+                            onClick={handleRemoveCard}
                         >
                             删除
                         </button>

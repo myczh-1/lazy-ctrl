@@ -1,4 +1,3 @@
-import type { CardConfig } from '@/types/layout'
 
 export interface CommandInfo {
   id: string
@@ -124,34 +123,11 @@ export class CommandAPI {
     return this.request<{ status: string; timestamp: number }>('/api/v1/health')
   }
 
-  /**
-   * 将 CommandInfo 转换为 CardConfig
-   */
-  static commandToCard(command: CommandInfo): CardConfig {
-    return {
-      id: command.id,
-      title: command.name || command.id,
-      commandId: command.id,
-      icon: command.icon,
-      category: command.category,
-      description: command.description,
-      available: command.available,
-      requiresPin: command.requiresPin,
-      timeout: command.timeout,
-    }
-  }
-
-  /**
-   * 批量将命令转换为卡片配置
-   */
-  static commandsToCards(commands: CommandInfo[]): CardConfig[] {
-    return commands
-      .map(cmd => this.commandToCard(cmd)) // 显示所有命令，但保留可用性状态
-  }
 }
 
 // 导出单例实例
-export default CommandAPI.getInstance()
+const commandAPIInstance = CommandAPI.getInstance()
+export default commandAPIInstance
 
 // 全局错误处理器
 export class APIError extends Error {

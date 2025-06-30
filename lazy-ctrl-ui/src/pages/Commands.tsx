@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { Command, DisplayCommand } from '@/types/command'
 import { commandTemplates, categoryInfo, templateToCommands, type CommandTemplate } from '@/data/commandTemplates'
-import layoutAPI from '@/api/layoutAPI'
+import { LayoutService } from '@/services/layoutService'
 import ParameterForm from '@/components/ParameterForm'
 
 // 图标组件
@@ -575,12 +575,8 @@ export default function Commands() {
   // 添加命令到主页布局
   const addToLayout = (displayCommand: DisplayCommand) => {
     try {
-      const cardId = layoutAPI.createCard({
-        title: displayCommand.name,
-        commandId: displayCommand.id,
-        icon: displayCommand.icon
-      })
-      if (cardId) {
+      const success = LayoutService.addCommandToLayout(displayCommand.id)
+      if (success) {
         showToast(`"${displayCommand.name}" 已添加到主页`, 'success')
       } else {
         showToast('添加失败，请确保主页已加载', 'error')

@@ -17,10 +17,10 @@ lazy-ctrl is a multi-component system for remote computer control consisting of:
    - Manages command configurations via REST API
    - Provides bridge between frontend and controller agent
 
-3. **Control Frontend (Taro + WeChat Mini Program/H5)** - User interface
-   - Location: `control-frontend/` (to be implemented) 
-   - Mobile interface for controlling local computer
-   - Supports both local and cloud-based control modes
+3. **Control Frontend (React + Vite)** - User interface
+   - Location: `lazy-ctrl-ui/`
+   - Web interface for controlling local computer
+   - Features: command templates, layout management, real-time execution
 
 4. **Cloud Gateway (Node.js)** - Optional cloud relay service
    - Location: `cloud-gateway/` (to be implemented)
@@ -35,11 +35,17 @@ go run main.go                    # Start the agent server
 go build -o lazy-ctrl-agent main.go  # Build executable
 ```
 
+### Frontend Development (React + Vite)
+```bash
+cd lazy-ctrl-ui
+npm run dev           # Start development server
+npm run build         # Build for production
+npm run lint          # Run linting
+```
+
 ### Workspace Management
 ```bash
 pnpm install          # Install dependencies for all packages
-pnpm run dev          # Run development servers (when implemented)
-pnpm run build        # Build all packages (when implemented)
 ```
 
 ## Key Configuration Files
@@ -51,8 +57,16 @@ pnpm run build        # Build all packages (when implemented)
 ## API Endpoints
 
 ### Controller Agent
-- `GET /execute?id={command_id}` - Execute registered command by ID
-- Returns command output or error response
+- `GET /api/v1/commands` - Get all available commands
+- `GET /api/v1/execute?id={command_id}` - Execute registered command by ID
+- `POST /api/v1/reload` - Reload command configuration
+- `GET /api/v1/health` - Health check
+
+### Frontend Architecture
+- **Command Templates**: Built-in templates for common commands
+- **Configuration Flow**: Template → Parameters → Save to Backend → Display in Command List
+- **Layout Management**: Commands can be added to homepage for quick access
+- **Real-time Execution**: Live feedback for command execution status
 
 ## Command Registration
 
