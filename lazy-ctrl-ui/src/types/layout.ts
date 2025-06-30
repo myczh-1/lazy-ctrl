@@ -7,6 +7,11 @@ export interface CardConfig {
     commandId?: string
     icon?: string
     color?: string
+    category?: string
+    description?: string
+    available?: boolean
+    requiresPin?: boolean
+    timeout?: number
 }
 
 export interface LayoutData {

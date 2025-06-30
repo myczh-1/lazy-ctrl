@@ -1,0 +1,183 @@
+import type { CardConfig } from '@/types/layout'
+
+export interface CommandInfo {
+  id: string
+  name: string
+  description: string
+  category: string
+  icon: string
+  timeout: number
+  requiresPin: boolean
+  whitelisted: boolean
+  available: boolean
+  command?: string
+}
+
+export interface CommandResponse {
+  version: string
+  commands: CommandInfo[]
+}
+
+export interface ExecutionResult {
+  success: boolean
+  output: string
+  error?: string
+  exit_code: number
+  execution_time: number
+}
+
+// 开发环境使用代理，生产环境使用完整URL
+const API_BASE_URL = import.meta.env.DEV ? '' : 'http://localhost:7070'
+
+export class CommandAPI {
+  private static instance: CommandAPI
+  private baseURL: string
+  private pin?: string
+
+  private constructor(baseURL: string = API_BASE_URL) {
+    this.baseURL = baseURL
+  }
+
+  static getInstance(baseURL?: string): CommandAPI {
+    if (!CommandAPI.instance) {
+      CommandAPI.instance = new CommandAPI(baseURL)
+    }
+    return CommandAPI.instance
+  }
+
+  setPin(pin: string) {
+    this.pin = pin
+  }
+
+  private getHeaders(): HeadersInit {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+    
+    if (this.pin) {
+      headers['X-Pin'] = this.pin
+    }
+    
+    return headers
+  }
+
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`
+    const config: RequestInit = {
+      ...options,
+      headers: {
+        ...this.getHeaders(),
+        ...options.headers,
+      },
+    }
+
+    try {
+      const response = await fetch(url, config)
+      
+      if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`HTTP ${response.status}: ${error}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error(`API request failed: ${endpoint}`, error)
+      throw error
+    }
+  }
+
+  /**
+   * 获取所有可用命令列表
+   */
+  async getCommands(): Promise<CommandResponse> {
+    return this.request<CommandResponse>('/api/v1/commands')
+  }
+
+  /**
+   * 执行命令
+   */
+  async executeCommand(
+    commandId: string, 
+    timeout?: number
+  ): Promise<ExecutionResult> {
+    const params = new URLSearchParams({ id: commandId })
+    if (timeout) {
+      params.append('timeout', timeout.toString())
+    }
+
+    return this.request<ExecutionResult>(`/api/v1/execute?${params}`)
+  }
+
+  /**
+   * 重新加载命令配置
+   */
+  async reloadCommands(): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/api/v1/reload', {
+      method: 'POST',
+    })
+  }
+
+  /**
+   * 健康检查
+   */
+  async health(): Promise<{ status: string; timestamp: number }> {
+    return this.request<{ status: string; timestamp: number }>('/api/v1/health')
+  }
+
+  /**
+   * 将 CommandInfo 转换为 CardConfig
+   */
+  static commandToCard(command: CommandInfo): CardConfig {
+    return {
+      id: command.id,
+      title: command.name || command.id,
+      commandId: command.id,
+      icon: command.icon,
+      category: command.category,
+      description: command.description,
+      available: command.available,
+      requiresPin: command.requiresPin,
+      timeout: command.timeout,
+    }
+  }
+
+  /**
+   * 批量将命令转换为卡片配置
+   */
+  static commandsToCards(commands: CommandInfo[]): CardConfig[] {
+    return commands
+      .map(cmd => this.commandToCard(cmd)) // 显示所有命令，但保留可用性状态
+  }
+}
+
+// 导出单例实例
+export default CommandAPI.getInstance()
+
+// 全局错误处理器
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public status?: number,
+    public response?: any
+  ) {
+    super(message)
+    this.name = 'APIError'
+  }
+}
+
+// 命令执行状态类型
+export const CommandStatus = {
+  IDLE: 'idle',
+  EXECUTING: 'executing',
+  SUCCESS: 'success',
+  ERROR: 'error',
+} as const
+
+export type CommandStatusType = typeof CommandStatus[keyof typeof CommandStatus]
+
+// Hook for command execution with state management
+export interface CommandExecutionState {
+  status: CommandStatusType
+  result?: ExecutionResult
+  error?: string
+}

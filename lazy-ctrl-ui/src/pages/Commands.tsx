@@ -282,7 +282,7 @@ export default function Commands() {
   const fetchCommands = async () => {
     try {
       // 首先尝试从 controller agent 获取
-      const response = await fetch('http://localhost:7070/commands')
+      const response = await fetch('/api/v1/commands')
       if (response.ok) {
         const data = await response.json()
         const parsedCommands = parseCommandsFromAPI(data)
@@ -533,7 +533,7 @@ export default function Commands() {
       
       if (platformCommand && typeof platformCommand === 'string') {
         try {
-          const response = await fetch(`http://localhost:7070/execute`, {
+          const response = await fetch(`/api/v1/execute`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -594,7 +594,7 @@ export default function Commands() {
   // 执行命令
   const executeCommand = async (commandId: string) => {
     try {
-      const response = await fetch(`http://localhost:7070/execute?id=${commandId}`)
+      const response = await fetch(`/api/v1/execute?id=${commandId}`)
       const result = await response.text()
       console.log('Command result:', result)
       

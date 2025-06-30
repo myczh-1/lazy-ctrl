@@ -63,6 +63,7 @@ func NewServer(
 
 func (s *Server) setupRoutes() {
 	// 添加中间件
+	s.router.Use(middleware.CORSMiddleware()) // 首先添加CORS支持
 	s.router.Use(middleware.LoggingMiddleware(s.logger))
 	s.router.Use(middleware.SecurityMiddleware(s.config, s.securityService))
 

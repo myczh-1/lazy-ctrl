@@ -92,7 +92,7 @@ export function useLayoutManager(initialLayout: Layout[] = [], initialCards: Car
     // 执行命令
     const executeCommand = async (commandId: string) => {
         try {
-            const response = await fetch(`http://localhost:7070/execute?id=${commandId}`)
+            const response = await fetch(`/api/v1/execute?id=${commandId}`)
             const result = await response.text()
             console.log('Command result:', result)
             return result
