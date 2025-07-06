@@ -19,7 +19,7 @@ security:
   allowed_commands: []
 
 commands:
-  config_path: "config/commands-v2.json"
+  config_path: "config/commands-v3.json"
   hot_reload: true
 
 mqtt:

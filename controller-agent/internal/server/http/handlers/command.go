@@ -50,7 +50,7 @@ func (h *CommandHandler) HandleListCommands(c *gin.Context) {
 		
 		// 添加首页相关信息
 		commandInfo["showOnHomepage"] = cmd.ShowOnHomepage()
-		if cmd.Homepage != nil {
+		if cmd.HomeLayout != nil {
 			x, y, width, height := cmd.GetHomepagePosition()
 			commandInfo["homepagePosition"] = gin.H{
 				"x": x,
@@ -59,6 +59,7 @@ func (h *CommandHandler) HandleListCommands(c *gin.Context) {
 				"height": height,
 			}
 			commandInfo["homepageColor"] = cmd.GetHomepageColor()
+			commandInfo["homepagePriority"] = cmd.GetHomepagePriority()
 		}
 		
 		// 获取当前平台的命令详情

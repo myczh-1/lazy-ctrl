@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Command, DisplayCommand } from '@/types/command'
-import { commandTemplates, categoryInfo, templateToCommands, type CommandTemplate } from '@/data/commandTemplates'
+import { commandTemplates, categoryInfo, templateToCommands } from '@/data/commandTemplates'
+import type { CommandTemplate } from '@/data/commandTemplates'
 import { LayoutService } from '@/services/layoutService'
 import ParameterForm from '@/components/ParameterForm'
 
@@ -38,13 +39,25 @@ const ConfiguredCommandCard = ({ command, onExecute, onAddToLayout, onDelete, on
   }
 
   const getCurrentPlatformCommand = () => {
-    const platform = getCurrentPlatform()
-    const platformCommand = command.platforms[platform] || command.platforms['all']
-    
-    if (Array.isArray(platformCommand)) {
-      return `多步骤命令 (${platformCommand.length} 步骤)`
+    // 从新的数据结构中获取命令
+    if (command.platforms && command.platforms['all']) {
+      const platformCommand = command.platforms['all']
+      if (Array.isArray(platformCommand)) {
+        return `多步骤命令 (${platformCommand.length} 步骤)`
+      }
+      return platformCommand || 'N/A'
     }
-    return platformCommand || 'N/A'
+    
+    // 如果没有 platforms 数据，尝试从 commands 数组中获取
+    if (command.commands && command.commands.length > 0) {
+      const cmd = command.commands[0]
+      if (Array.isArray(cmd.command)) {
+        return `多步骤命令 (${cmd.command.length} 步骤)`
+      }
+      return cmd.command || 'N/A'
+    }
+    
+    return 'N/A'
   }
   
   const getCurrentPlatform = () => {
@@ -77,13 +90,18 @@ const ConfiguredCommandCard = ({ command, onExecute, onAddToLayout, onDelete, on
             <p className="text-sm text-gray-600 mb-3">{command.description}</p>
           )}
           <div className="bg-gray-50 rounded-lg p-2 mb-3">
-            <p className="text-xs text-gray-500 mb-1">当前平台命令:</p>
+            <p className="text-xs text-gray-500 mb-1">命令详情:</p>
             <code className="text-xs text-gray-700 font-mono break-all">
               {getCurrentPlatformCommand()}
             </code>
-            {Object.keys(command.platforms).length > 1 && (
+            {command.platforms && Object.keys(command.platforms).length > 1 && (
               <p className="text-xs text-gray-500 mt-1">
                 支持平台: {Object.keys(command.platforms).join(', ')}
+              </p>
+            )}
+            {command.commands && command.commands.length > 0 && command.commands[0].platform && (
+              <p className="text-xs text-gray-500 mt-1">
+                平台: {command.commands[0].platform}
               </p>
             )}
           </div>
@@ -277,17 +295,29 @@ export default function Commands() {
   const [configureTemplate, setConfigureTemplate] = useState<CommandTemplate | null>(null)
   const [configureMode, setConfigureMode] = useState<'add' | 'execute' | 'both'>('both')
   const [editingCommand, setEditingCommand] = useState<DisplayCommand | null>(null)
+  const fetchingRef = useRef(false)
 
   // 获取命令列表
   const fetchCommands = async () => {
+    // 防止重复请求（解决 React.StrictMode 双重调用问题）
+    if (fetchingRef.current) {
+      console.log('Fetch already in progress, skipping duplicate request')
+      return
+    }
+    
+    fetchingRef.current = true
     try {
+      console.log('Fetching commands from API...')
       // 首先尝试从 controller agent 获取
       const response = await fetch('/api/v1/commands')
       if (response.ok) {
         const data = await response.json()
+        console.log('API response:', data)
         const parsedCommands = parseCommandsFromAPI(data)
+        console.log('Parsed commands:', parsedCommands)
         setCommands(parsedCommands)
       } else {
+        console.log('API not available, loading from localStorage')
         // 如果 API 不可用，从本地存储获取
         const savedCommands = localStorage.getItem('lazy-ctrl-commands')
         if (savedCommands) {
@@ -311,48 +341,46 @@ export default function Commands() {
       }
     } finally {
       setLoading(false)
+      fetchingRef.current = false
     }
   }
 
-  // 解析从 API 获取的命令配置（兼容旧格式）
-  const parseCommandsFromAPI = (rawCommands: any): DisplayCommand[] => {
-    // 如果是新格式（数组）
-    if (Array.isArray(rawCommands)) {
-      return groupCommandsForDisplay(rawCommands as Command[])
-    }
+  // 解析从 API 获取的命令配置
+  const parseCommandsFromAPI = (apiResponse: any): DisplayCommand[] => {
+    console.log('Parsing API response:', apiResponse)
     
-    // 如果是旧格式（对象），转换为新格式
-    const commands: Command[] = []
-    Object.entries(rawCommands).forEach(([id, config]: [string, any]) => {
-      const categoryInfo = inferCategoryFromId(id)
-      
-      if (typeof config === 'string') {
-        commands.push({
-          id,
-          name: formatCommandName(id),
+    // 检查响应格式：应该是 { version: string, commands: CommandInfo[] }
+    if (!apiResponse || !apiResponse.commands || !Array.isArray(apiResponse.commands)) {
+      console.error('Invalid API response format:', apiResponse)
+      return []
+    }
+
+    // 直接将后端返回的命令信息转换为 DisplayCommand 格式
+    const displayCommands: DisplayCommand[] = apiResponse.commands.map((cmdInfo: any) => {
+      return {
+        id: cmdInfo.id,
+        name: cmdInfo.name || formatCommandName(cmdInfo.id),
+        description: cmdInfo.description || '',
+        icon: cmdInfo.icon || getCategoryIcon(cmdInfo.category || 'custom'),
+        category: cmdInfo.category || 'custom',
+        platforms: {
+          // 由于后端只返回当前平台的命令，我们假设它适用于所有平台
+          'all': cmdInfo.command || ''
+        },
+        commands: [{
+          id: cmdInfo.id,
+          name: cmdInfo.name || formatCommandName(cmdInfo.id),
           platform: 'all',
-          command: config,
-          category: categoryInfo.category,
-          icon: getCategoryIcon(categoryInfo.category),
-          description: categoryInfo.description
-        })
-      } else if (typeof config === 'object') {
-        // 多平台命令
-        Object.entries(config).forEach(([platform, cmd]) => {
-          commands.push({
-            id,
-            name: formatCommandName(id),
-            platform,
-            command: cmd as string,
-            category: categoryInfo.category,
-            icon: getCategoryIcon(categoryInfo.category),
-            description: categoryInfo.description
-          })
-        })
+          command: cmdInfo.command || '',
+          category: cmdInfo.category || 'custom',
+          icon: cmdInfo.icon || getCategoryIcon(cmdInfo.category || 'custom'),
+          description: cmdInfo.description || ''
+        }]
       }
     })
-    
-    return groupCommandsForDisplay(commands)
+
+    console.log('Converted to DisplayCommands:', displayCommands)
+    return displayCommands
   }
   
   // 将命令列表按ID分组以供显示
@@ -397,22 +425,6 @@ export default function Commands() {
       .join(' ')
   }
 
-  // 根据ID推断分类
-  const inferCategoryFromId = (id: string) => {
-    if (id.includes('volume') || id.includes('mute')) {
-      return { category: 'audio', description: '音频控制命令' }
-    }
-    if (id.includes('lock') || id.includes('shutdown')) {
-      return { category: 'system', description: '系统控制命令' }
-    }
-    if (id.includes('power') || id.includes('sleep')) {
-      return { category: 'power', description: '电源管理命令' }
-    }
-    if (id.includes('test')) {
-      return { category: 'custom', description: '测试命令' }
-    }
-    return { category: 'custom', description: '自定义命令' }
-  }
 
   const getCategoryIcon = (category: string): string => {
     const icons: Record<string, string> = {
@@ -703,7 +715,10 @@ export default function Commands() {
           显示 {filteredCommands.length} / {commands.length} 个命令
         </div>
         <button
-          onClick={fetchCommands}
+          onClick={() => {
+            fetchingRef.current = false // 重置请求状态，允许手动刷新
+            fetchCommands()
+          }}
           className="text-sm text-blue-500 hover:text-blue-600 font-medium"
         >
           刷新列表

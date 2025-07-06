@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -124,36 +123,9 @@ func (h *ExecuteHandler) executeCommand(c *gin.Context, commandID string, cmd *m
 
 // extractCommandSteps 从命令中提取命令步骤
 func (h *ExecuteHandler) extractCommandSteps(cmd *model.Command) []model.CommandStep {
-	platform := runtime.GOOS
-
-	platformData, ok := cmd.Platforms[platform]
-	if !ok {
-		return nil
-	}
-
-	if platformMap, ok := platformData.(map[string]interface{}); ok {
-		if commandsData, ok := platformMap["commands"]; ok {
-			if commandsList, ok := commandsData.([]interface{}); ok {
-				steps := make([]model.CommandStep, 0, len(commandsList))
-				for _, stepData := range commandsList {
-					if stepMap, ok := stepData.(map[string]interface{}); ok {
-						step := model.CommandStep{}
-						if stepType, ok := stepMap["type"].(string); ok {
-							step.Type = stepType
-						}
-						if cmd, ok := stepMap["cmd"].(string); ok {
-							step.Cmd = cmd
-						}
-						if duration, ok := stepMap["duration"].(float64); ok {
-							step.Duration = int(duration)
-						}
-						steps = append(steps, step)
-					}
-				}
-				return steps
-			}
-		}
-	}
+	// 基于新的设计，单个命令条目不包含复杂步骤
+	// 如果需要复杂步骤，应该由前端生成对应的命令
+	// 这里暂时返回空，保持简单设计
 	return nil
 }
 

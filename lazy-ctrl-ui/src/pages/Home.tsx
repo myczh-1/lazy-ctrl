@@ -249,9 +249,17 @@ export default function Home() {
                     width={containerWidth}
                     isDraggable={editMode}
                     isResizable={editMode}
-                    onLayoutChange={setLayout}
+                    onLayoutChange={(newLayout) => {
+                        setLayout(newLayout)
+                        // 自动保存布局变化
+                        LayoutService.saveLayout()
+                    }}
                     onDragStart={handleDragStart}
                     onDragStop={handleDragStop}
+                    onResizeStop={() => {
+                        // 调整大小后也要保存
+                        LayoutService.saveLayout()
+                    }}
                     style={editMode ? { WebkitTouchCallout: 'none' } : {}}
                 >
                     {layout.map((item) => {

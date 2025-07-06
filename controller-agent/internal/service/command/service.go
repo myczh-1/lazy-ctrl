@@ -33,19 +33,12 @@ func (s *Service) GetAllCommands() []model.Command {
 }
 
 func (s *Service) GetPlatformCommand(cmd *model.Command) (string, bool) {
-	platformData, ok := cmd.Platforms[runtime.GOOS]
-	if !ok {
-		return "", false
+	// 检查当前平台是否匹配
+	if cmd.Platform == runtime.GOOS {
+		return cmd.Command, true
 	}
-
-	switch v := platformData.(type) {
-	case string:
-		return v, true
-	case map[string]interface{}:
-		if command, ok := v["command"].(string); ok {
-			return command, true
-		}
-	}
+	
+	// 如果平台不匹配，返回空
 	return "", false
 }
 
@@ -121,7 +114,7 @@ func (s *Service) GetCommandInfo(id string) map[string]interface{} {
 		
 		// 添加首页相关信息
 		info["showOnHomepage"] = cmd.ShowOnHomepage()
-		if cmd.Homepage != nil {
+		if cmd.HomeLayout != nil {
 			x, y, width, height := cmd.GetHomepagePosition()
 			info["homepagePosition"] = map[string]interface{}{
 				"x": x,
@@ -130,6 +123,7 @@ func (s *Service) GetCommandInfo(id string) map[string]interface{} {
 				"height": height,
 			}
 			info["homepageColor"] = cmd.GetHomepageColor()
+			info["homepagePriority"] = cmd.GetHomepagePriority()
 		}
 	}
 	

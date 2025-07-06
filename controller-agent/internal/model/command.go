@@ -8,17 +8,23 @@ type CommandConfig struct {
 
 // Command 单个命令配置
 type Command struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	Category    string                 `json:"category,omitempty"`
-	Icon        string                 `json:"icon,omitempty"`
-	Platforms   map[string]interface{} `json:"platforms"`
-	Security    *SecurityConfig        `json:"security,omitempty"`
-	Timeout     int                    `json:"timeout,omitempty"`
-	UserID      string                 `json:"userId,omitempty"`
-	DeviceID    string                 `json:"deviceId,omitempty"`
-	Homepage    *HomepageConfig        `json:"homepage,omitempty"`
+	ID             string               `json:"id"`
+	Name           string               `json:"name,omitempty"`
+	Description    string               `json:"description,omitempty"`
+	Category       string               `json:"category,omitempty"`
+	Icon           string               `json:"icon,omitempty"`
+	Command        string               `json:"command"`
+	Platform       string               `json:"platform"`
+	CommandType    string               `json:"commandType,omitempty"`
+	Security       *SecurityConfig      `json:"security,omitempty"`
+	Timeout        int                  `json:"timeout,omitempty"`
+	UserID         string               `json:"userId,omitempty"`
+	DeviceID       string               `json:"deviceId,omitempty"`
+	HomeLayout     *HomeLayoutConfig    `json:"homeLayout,omitempty"`
+	TemplateId     string               `json:"templateId,omitempty"`
+	TemplateParams map[string]interface{} `json:"templateParams,omitempty"`
+	CreatedAt      string               `json:"createdAt,omitempty"`
+	UpdatedAt      string               `json:"updatedAt,omitempty"`
 }
 
 // SecurityConfig 安全配置
@@ -28,14 +34,20 @@ type SecurityConfig struct {
 	AdminOnly  bool `json:"adminOnly,omitempty"`
 }
 
-// HomepageConfig 首页展示配置
-type HomepageConfig struct {
-	ShowOnHomepage bool `json:"showOnHomepage"`
-	X              int  `json:"x,omitempty"`
-	Y              int  `json:"y,omitempty"`
-	Width          int  `json:"width,omitempty"`
-	Height         int  `json:"height,omitempty"`
-	Color          string `json:"color,omitempty"`
+// HomeLayoutConfig 首页展示配置
+type HomeLayoutConfig struct {
+	ShowOnHome      bool                   `json:"showOnHome"`
+	DefaultPosition *PositionConfig        `json:"defaultPosition,omitempty"`
+	Color           string                 `json:"color,omitempty"`
+	Priority        int                    `json:"priority,omitempty"`
+}
+
+// PositionConfig 位置配置
+type PositionConfig struct {
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	Width  int `json:"w"`
+	Height int `json:"h"`
 }
 
 // PlatformCommand 平台特定命令配置
@@ -87,21 +99,22 @@ func (c *Command) RequiresAdmin() bool {
 
 // ShowOnHomepage 检查命令是否在首页显示
 func (c *Command) ShowOnHomepage() bool {
-	if c.Homepage == nil {
+	if c.HomeLayout == nil {
 		return false
 	}
-	return c.Homepage.ShowOnHomepage
+	return c.HomeLayout.ShowOnHome
 }
 
 // GetHomepagePosition 获取首页位置信息
 func (c *Command) GetHomepagePosition() (x, y, width, height int) {
-	if c.Homepage == nil {
+	if c.HomeLayout == nil || c.HomeLayout.DefaultPosition == nil {
 		return 0, 0, 1, 1 // 默认大小
 	}
-	x = c.Homepage.X
-	y = c.Homepage.Y
-	width = c.Homepage.Width
-	height = c.Homepage.Height
+	pos := c.HomeLayout.DefaultPosition
+	x = pos.X
+	y = pos.Y
+	width = pos.Width
+	height = pos.Height
 	
 	// 设置默认值
 	if width <= 0 {
@@ -116,8 +129,16 @@ func (c *Command) GetHomepagePosition() (x, y, width, height int) {
 
 // GetHomepageColor 获取首页卡片颜色
 func (c *Command) GetHomepageColor() string {
-	if c.Homepage == nil || c.Homepage.Color == "" {
+	if c.HomeLayout == nil || c.HomeLayout.Color == "" {
 		return ""
 	}
-	return c.Homepage.Color
+	return c.HomeLayout.Color
+}
+
+// GetHomepagePriority 获取首页优先级
+func (c *Command) GetHomepagePriority() int {
+	if c.HomeLayout == nil {
+		return 0
+	}
+	return c.HomeLayout.Priority
 }
