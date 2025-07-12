@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"runtime"
+	"time"
 
 	"github.com/myczh-1/lazy-ctrl-agent/internal/config"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/model"
@@ -128,4 +129,65 @@ func (s *Service) GetCommandInfo(id string) map[string]interface{} {
 	}
 	
 	return info
+}
+
+// CreateCommand 创建新命令
+func (s *Service) CreateCommand(cmd *config.Command) error {
+	if cmd.ID == "" {
+		return fmt.Errorf("command ID is required")
+	}
+	
+	if cmd.Command == "" {
+		return fmt.Errorf("command string is required")
+	}
+	
+	// 设置默认值
+	if cmd.Platform == "" {
+		cmd.Platform = runtime.GOOS
+	}
+	
+	if cmd.Timeout == 0 {
+		cmd.Timeout = 10000 // 默认10秒
+	}
+	
+	// 设置时间戳
+	now := time.Now().Format(time.RFC3339)
+	cmd.CreatedAt = now
+	cmd.UpdatedAt = now
+	
+	// 保存到配置
+	return config.AddCommand(cmd)
+}
+
+// UpdateCommand 更新命令
+func (s *Service) UpdateCommand(cmd *config.Command) error {
+	if cmd.ID == "" {
+		return fmt.Errorf("command ID is required")
+	}
+	
+	// 检查命令是否存在
+	if _, exists := s.GetCommand(cmd.ID); !exists {
+		return fmt.Errorf("command not found: %s", cmd.ID)
+	}
+	
+	// 设置更新时间
+	cmd.UpdatedAt = time.Now().Format(time.RFC3339)
+	
+	// 更新配置
+	return config.UpdateCommand(cmd)
+}
+
+// DeleteCommand 删除命令
+func (s *Service) DeleteCommand(id string) error {
+	if id == "" {
+		return fmt.Errorf("command ID is required")
+	}
+	
+	// 检查命令是否存在
+	if _, exists := s.GetCommand(id); !exists {
+		return fmt.Errorf("command not found: %s", id)
+	}
+	
+	// 从配置中删除
+	return config.DeleteCommand(id)
 }

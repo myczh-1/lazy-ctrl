@@ -78,7 +78,7 @@ export default function Home() {
         setDragState({ isDragging: true, draggedItem: oldItem.i })
     }
 
-    const handleDragStop = (_layout: Layout[], oldItem: Layout, newItem: Layout) => {
+    const handleDragStop = async (newLayout: Layout[], oldItem: Layout, newItem: Layout) => {
         const wasDragging = dragState.isDragging
         const draggedItem = dragState.draggedItem
         
@@ -89,6 +89,19 @@ export default function Home() {
             oldItem.x === newItem.x && oldItem.y === newItem.y && 
             oldItem.w === newItem.w && oldItem.h === newItem.h) {
             LayoutService.handleCardClick(draggedItem)
+        } else {
+            // 位置发生了变化，更新布局并保存到后端
+            setLayout(newLayout)
+            await LayoutService.saveLayout()
+        }
+    }
+    
+    // 布局变化处理（包括拖拽和调整大小）
+    const handleLayoutChange = async (newLayout: Layout[]) => {
+        // 只有在非拖拽状态下才更新布局（避免拖拽过程中频繁更新）
+        if (!dragState.isDragging) {
+            setLayout(newLayout)
+            await LayoutService.saveLayout()
         }
     }
 
@@ -101,16 +114,16 @@ export default function Home() {
         LayoutService.resetLayout()
     }
 
-    const handleSizeChange = (size: 'small' | 'medium' | 'large') => {
+    const handleSizeChange = async (size: 'small' | 'medium' | 'large') => {
         if (selectedCard) {
-            LayoutService.changeCardSize(selectedCard, size)
+            await LayoutService.changeCardSize(selectedCard, size)
         }
     }
 
-    const handleRemoveCard = () => {
+    const handleRemoveCard = async () => {
         if (selectedCard) {
             useLayoutStore.getState().removeCard(selectedCard)
-            LayoutService.saveLayout()
+            await LayoutService.saveLayout()
         }
     }
 
@@ -274,7 +287,16 @@ export default function Home() {
                                     editMode && selectedCard === item.i 
                                         ? 'border-blue-400 border-2 shadow-lg' 
                                         : 'border-gray-300'
+                                }${
+                                    !editMode ? ' cursor-pointer hover:shadow-lg hover:border-blue-300' : ''
                                 }`}
+                                onClick={(e) => {
+                                    if (!editMode) {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        LayoutService.handleCardClick(item.i)
+                                    }
+                                }}
                                 onContextMenu={(e) => {
                                     e.preventDefault()
                                     setEditMode(true)
@@ -295,18 +317,18 @@ export default function Home() {
                                     </div>
                                     
                                     {/* 卡片描述 */}
-                                    {card?.description && !editMode && (
-                                        <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                            {card.description}
-                                        </div>
-                                    )}
+                                    {/*{card?.description && !editMode && (*/}
+                                    {/*    <div className="text-xs text-gray-500 mt-1 line-clamp-2">*/}
+                                    {/*        {card.description}*/}
+                                    {/*    </div>*/}
+                                    {/*)}*/}
                                     
                                     {/* 类别标签 */}
-                                    {card?.category && !editMode && (
-                                        <div className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded mt-1">
-                                            {card.category}
-                                        </div>
-                                    )}
+                                    {/*{card?.category && !editMode && (*/}
+                                    {/*    <div className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded mt-1">*/}
+                                    {/*        {card.category}*/}
+                                    {/*    </div>*/}
+                                    {/*)}*/}
                                     
                                     {/* PIN 要求指示 */}
                                     {card?.requiresPin && !editMode && (
@@ -324,11 +346,11 @@ export default function Home() {
                                             {dragState.isDragging && dragState.draggedItem === item.i ? '拖拽中...' : '点击选择'}
                                         </div>
                                     )}
-                                    {!editMode && (
-                                        <div className="text-xs text-gray-400 mt-1">
-                                            {card?.available !== false ? '点击执行' : '不可用'}
-                                        </div>
-                                    )}
+                                    {/*{!editMode && (*/}
+                                    {/*    <div className="text-xs text-gray-400 mt-1">*/}
+                                    {/*        {card?.available !== false ? '点击执行' : '不可用'}*/}
+                                    {/*    </div>*/}
+                                    {/*)}*/}
                                 </div>
                             </div>
                         )

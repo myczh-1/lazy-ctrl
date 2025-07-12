@@ -198,3 +198,196 @@ func GetCommandsVersion() string {
 func ReloadCommands() error {
 	return loadCommands()
 }
+
+// AddCommand 添加新命令
+func AddCommand(cmd *Command) error {
+	if globalConfig == nil {
+		return fmt.Errorf("config not loaded")
+	}
+	
+	// 检查命令是否已存在
+	for _, existingCmd := range globalConfig.Commands.Commands {
+		if existingCmd.ID == cmd.ID {
+			return fmt.Errorf("command with ID %s already exists", cmd.ID)
+		}
+	}
+	
+	// 转换为model.Command
+	newCmd := model.Command{
+		ID:             cmd.ID,
+		Name:           cmd.Name,
+		Description:    cmd.Description,
+		Category:       cmd.Category,
+		Icon:           cmd.Icon,
+		Command:        cmd.Command,
+		Platform:       cmd.Platform,
+		CommandType:    cmd.CommandType,
+		Timeout:        cmd.Timeout,
+		UserID:         cmd.UserID,
+		DeviceID:       cmd.DeviceID,
+		TemplateId:     cmd.TemplateId,
+		TemplateParams: cmd.TemplateParams,
+		CreatedAt:      cmd.CreatedAt,
+		UpdatedAt:      cmd.UpdatedAt,
+	}
+	
+	// 转换安全配置
+	if cmd.Security != nil {
+		newCmd.Security = &model.SecurityConfig{
+			RequirePin: cmd.Security.RequirePin,
+			Whitelist:  cmd.Security.Whitelist,
+			AdminOnly:  cmd.Security.AdminOnly,
+		}
+	}
+	
+	// 转换首页布局配置
+	if cmd.HomeLayout != nil {
+		newCmd.HomeLayout = &model.HomeLayoutConfig{
+			ShowOnHome: cmd.HomeLayout.ShowOnHome,
+			Color:      cmd.HomeLayout.Color,
+			Priority:   cmd.HomeLayout.Priority,
+		}
+		if cmd.HomeLayout.DefaultPosition != nil {
+			newCmd.HomeLayout.DefaultPosition = &model.PositionConfig{
+				X:      cmd.HomeLayout.DefaultPosition.X,
+				Y:      cmd.HomeLayout.DefaultPosition.Y,
+				Width:  cmd.HomeLayout.DefaultPosition.Width,
+				Height: cmd.HomeLayout.DefaultPosition.Height,
+			}
+		}
+	}
+	
+	// 添加到命令列表
+	globalConfig.Commands.Commands = append(globalConfig.Commands.Commands, newCmd)
+	
+	// 保存到文件
+	return saveCommands()
+}
+
+// UpdateCommand 更新命令
+func UpdateCommand(cmd *Command) error {
+	if globalConfig == nil {
+		return fmt.Errorf("config not loaded")
+	}
+	
+	// 查找并更新命令
+	for i, existingCmd := range globalConfig.Commands.Commands {
+		if existingCmd.ID == cmd.ID {
+			// 更新命令信息
+			updatedCmd := model.Command{
+				ID:             cmd.ID,
+				Name:           cmd.Name,
+				Description:    cmd.Description,
+				Category:       cmd.Category,
+				Icon:           cmd.Icon,
+				Command:        cmd.Command,
+				Platform:       cmd.Platform,
+				CommandType:    cmd.CommandType,
+				Timeout:        cmd.Timeout,
+				UserID:         cmd.UserID,
+				DeviceID:       cmd.DeviceID,
+				TemplateId:     cmd.TemplateId,
+				TemplateParams: cmd.TemplateParams,
+				CreatedAt:      existingCmd.CreatedAt, // 保持原创建时间
+				UpdatedAt:      cmd.UpdatedAt,
+			}
+			
+			// 转换安全配置
+			if cmd.Security != nil {
+				updatedCmd.Security = &model.SecurityConfig{
+					RequirePin: cmd.Security.RequirePin,
+					Whitelist:  cmd.Security.Whitelist,
+					AdminOnly:  cmd.Security.AdminOnly,
+				}
+			}
+			
+			// 转换首页布局配置
+			if cmd.HomeLayout != nil {
+				updatedCmd.HomeLayout = &model.HomeLayoutConfig{
+					ShowOnHome: cmd.HomeLayout.ShowOnHome,
+					Color:      cmd.HomeLayout.Color,
+					Priority:   cmd.HomeLayout.Priority,
+				}
+				if cmd.HomeLayout.DefaultPosition != nil {
+					updatedCmd.HomeLayout.DefaultPosition = &model.PositionConfig{
+						X:      cmd.HomeLayout.DefaultPosition.X,
+						Y:      cmd.HomeLayout.DefaultPosition.Y,
+						Width:  cmd.HomeLayout.DefaultPosition.Width,
+						Height: cmd.HomeLayout.DefaultPosition.Height,
+					}
+				}
+			}
+			
+			globalConfig.Commands.Commands[i] = updatedCmd
+			return saveCommands()
+		}
+	}
+	
+	return fmt.Errorf("command not found: %s", cmd.ID)
+}
+
+// DeleteCommand 删除命令
+func DeleteCommand(id string) error {
+	if globalConfig == nil {
+		return fmt.Errorf("config not loaded")
+	}
+	
+	// 查找并删除命令
+	for i, cmd := range globalConfig.Commands.Commands {
+		if cmd.ID == id {
+			// 从切片中删除
+			globalConfig.Commands.Commands = append(
+				globalConfig.Commands.Commands[:i],
+				globalConfig.Commands.Commands[i+1:]...,
+			)
+			return saveCommands()
+		}
+	}
+	
+	return fmt.Errorf("command not found: %s", id)
+}
+
+// saveCommands 保存命令配置到文件
+func saveCommands() error {
+	commandConfig := model.CommandConfig{
+		Version:  globalConfig.Commands.Version,
+		Commands: globalConfig.Commands.Commands,
+	}
+	
+	data, err := json.MarshalIndent(commandConfig, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal commands: %w", err)
+	}
+	
+	commandsPath := globalConfig.Commands.ConfigPath
+	if !filepath.IsAbs(commandsPath) {
+		commandsPath = filepath.Join(".", commandsPath)
+	}
+	
+	if err := ioutil.WriteFile(commandsPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write commands file: %w", err)
+	}
+	
+	return nil
+}
+
+// Command 结构体用于API接口
+type Command struct {
+	ID             string                 `json:"id"`
+	Name           string                 `json:"name,omitempty"`
+	Description    string                 `json:"description,omitempty"`
+	Category       string                 `json:"category,omitempty"`
+	Icon           string                 `json:"icon,omitempty"`
+	Command        string                 `json:"command"`
+	Platform       string                 `json:"platform"`
+	CommandType    string                 `json:"commandType,omitempty"`
+	Security       *model.SecurityConfig  `json:"security,omitempty"`
+	Timeout        int                    `json:"timeout,omitempty"`
+	UserID         string                 `json:"userId,omitempty"`
+	DeviceID       string                 `json:"deviceId,omitempty"`
+	HomeLayout     *model.HomeLayoutConfig `json:"homeLayout,omitempty"`
+	TemplateId     string                 `json:"templateId,omitempty"`
+	TemplateParams map[string]interface{} `json:"templateParams,omitempty"`
+	CreatedAt      string                 `json:"createdAt,omitempty"`
+	UpdatedAt      string                 `json:"updatedAt,omitempty"`
+}

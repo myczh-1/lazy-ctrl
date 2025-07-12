@@ -1,23 +1,130 @@
 {
-  "mute": {
-    "windows": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]173)\"",
-    "linux": "amixer set Master mute",
-    "darwin": "osascript -e 'set volume output muted true'"
-  },
-  "unmute": {
-    "windows": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]173)\"",
-    "linux": "amixer set Master unmute",
-    "darwin": "osascript -e 'set volume output muted false'"
-  },
-  "lock": {
-    "windows": "rundll32.exe user32.dll,LockWorkStation",
-    "linux": "xdg-screensaver lock",
-    "darwin": "pmset displaysleepnow"
-  },
-  "volume_up": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]175)\"",
-  "volume_down": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]174)\"",
-  "test_win": "echo Windows test",
-  "shutdown": "echo 'Shutdown command received - would execute: sudo shutdown -h now'",
-  "test": "echo \"${PATH}\""
+  "version": "3.0",
+  "commands": [
+    {
+      "id": "mute_cmd_001",
+      "name": "静音",
+      "description": "切换系统音频静音状态",
+      "category": "音频控制",
+      "icon": "volume-mute",
+      "command": "osascript -e 'set volume output muted true'",
+      "platform": "darwin",
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 3000,
+      "homeLayout": {
+        "showOnHome": false,
+        "defaultPosition": {
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      },
+      "createdAt": "2024-06-30T00:00:00Z",
+      "updatedAt": "2025-07-12T12:45:33+08:00"
+    },
+    {
+      "id": "unmute_cmd_002",
+      "name": "取消静音",
+      "description": "取消系统音频静音状态",
+      "category": "音频控制",
+      "icon": "volume-up",
+      "command": "osascript -e 'set volume output muted false'",
+      "platform": "darwin",
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 3000,
+      "homeLayout": {
+        "showOnHome": false,
+        "defaultPosition": {
+          "x": 1,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      },
+      "createdAt": "2024-06-30T00:00:00Z",
+      "updatedAt": "2025-07-12T12:45:33+08:00"
+    },
+    {
+      "id": "lock_cmd_003",
+      "name": "锁屏",
+      "description": "锁定计算机屏幕",
+      "category": "系统控制",
+      "icon": "lock",
+      "command": "pmset displaysleepnow",
+      "platform": "darwin",
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 5000,
+      "homeLayout": {
+        "showOnHome": false,
+        "defaultPosition": {
+          "x": 2,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      },
+      "createdAt": "2024-06-30T00:00:00Z",
+      "updatedAt": "2025-07-12T12:45:33+08:00"
+    },
+    {
+      "id": "volume_up_cmd_004",
+      "name": "音量+",
+      "description": "增加系统音量",
+      "category": "音频控制",
+      "icon": "volume-plus",
+      "command": "osascript -e 'set volume output volume (output volume of (get volume settings) + 10)'",
+      "platform": "darwin",
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 2000,
+      "homeLayout": {
+        "showOnHome": false,
+        "defaultPosition": {
+          "x": 3,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      },
+      "createdAt": "2024-06-30T00:00:00Z",
+      "updatedAt": "2025-07-12T12:45:33+08:00"
+    },
+    {
+      "id": "volume_down_cmd_005",
+      "name": "音量-",
+      "description": "降低系统音量",
+      "category": "音频控制", 
+      "icon": "volume-minus",
+      "command": "osascript -e 'set volume output volume (output volume of (get volume settings) - 10)'",
+      "platform": "darwin",
+      "security": {
+        "requirePin": false,
+        "whitelist": true
+      },
+      "timeout": 2000,
+      "homeLayout": {
+        "showOnHome": false,
+        "defaultPosition": {
+          "x": 0,
+          "y": 1,
+          "w": 1,
+          "h": 1
+        }
+      },
+      "createdAt": "2024-06-30T00:00:00Z",
+      "updatedAt": "2025-07-12T12:45:33+08:00"
+    }
+  ]
 }
-

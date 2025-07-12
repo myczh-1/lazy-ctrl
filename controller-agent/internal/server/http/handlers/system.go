@@ -21,7 +21,7 @@ func NewSystemHandler() *SystemHandler {
 //	@Accept			json
 //	@Produce		json
 //	@Param			X-Pin	header		string	false	"PIN for authentication (if required)"
-//	@Success		200		{object}	gin.H{status=string,timestamp=int}
+//	@Success		200		{object}	gin.H{status=string,timestamp=int,version=string}
 //	@Failure		401		{object}	gin.H	"Unauthorized"
 //	@Failure		429		{object}	gin.H	"Too Many Requests"
 //	@Security		PinAuth
@@ -30,5 +30,7 @@ func (h *SystemHandler) HandleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":    "healthy",
 		"timestamp": time.Now().Unix(),
+		"version":   "2.0.0",
+		"service":   "lazy-ctrl-agent",
 	})
 }

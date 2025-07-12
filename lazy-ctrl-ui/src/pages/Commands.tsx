@@ -4,6 +4,7 @@ import { commandTemplates, categoryInfo, templateToCommands } from '@/data/comma
 import type { CommandTemplate } from '@/data/commandTemplates'
 import { LayoutService } from '@/services/layoutService'
 import ParameterForm from '@/components/ParameterForm'
+import commandAPI, { type CreateCommandRequest } from '@/api/commandAPI'
 
 // 图标组件
 const CommandIcon = ({ icon, category }: { icon?: string; category?: string }) => {
@@ -19,12 +20,13 @@ const CommandIcon = ({ icon, category }: { icon?: string; category?: string }) =
 }
 
 // 已配置命令卡片组件
-const ConfiguredCommandCard = ({ command, onExecute, onAddToLayout, onDelete, onEditConfig }: { 
+const ConfiguredCommandCard = ({ command, onExecute, onAddToLayout, onDelete, onEditConfig, onDirectEdit }: { 
   command: DisplayCommand; 
   onExecute: (id: string) => void;
   onAddToLayout: (command: DisplayCommand) => void;
   onDelete: (id: string) => void;
   onEditConfig?: (command: DisplayCommand) => void;
+  onDirectEdit?: (command: DisplayCommand) => void;
 }) => {
   const [isExecuting, setIsExecuting] = useState(false)
   const [showActions, setShowActions] = useState(false)
@@ -133,14 +135,24 @@ const ConfiguredCommandCard = ({ command, onExecute, onAddToLayout, onDelete, on
                   删除
                 </button>
               </div>
-              {onEditConfig && (
-                <button
-                  onClick={() => onEditConfig(command)}
-                  className="w-full px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium text-sm transition-all shadow-sm"
-                >
-                  ⚙️ 重新配置参数
-                </button>
-              )}
+              <div className="space-y-2">
+                {onEditConfig && (
+                  <button
+                    onClick={() => onEditConfig(command)}
+                    className="w-full px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium text-sm transition-all shadow-sm"
+                  >
+                    ⚙️ 重新配置参数
+                  </button>
+                )}
+                {onDirectEdit && (
+                  <button
+                    onClick={() => onDirectEdit(command)}
+                    className="w-full px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium text-sm transition-all shadow-sm"
+                  >
+                    📝 编辑信息
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
@@ -226,6 +238,160 @@ const TemplateCard = ({ template, onConfigure }: {
   )
 }
 
+// 直接编辑命令模态框
+const DirectEditModal = ({ isOpen, onClose, command, onSave }: {
+  isOpen: boolean;
+  onClose: () => void;
+  command: DisplayCommand | null;
+  onSave: (updatedCommand: CreateCommandRequest) => void;
+}) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    category: 'custom',
+    icon: '',
+    command: ''
+  })
+
+  useEffect(() => {
+    if (command) {
+      setFormData({
+        name: command.name || '',
+        description: command.description || '',
+        category: command.category || 'custom',
+        icon: command.icon || '',
+        command: command.commands?.[0]?.command || ''
+      })
+    }
+  }, [command])
+
+  if (!isOpen || !command) return null
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    const updatedCommand: CreateCommandRequest = {
+      id: command.id,
+      name: formData.name,
+      description: formData.description,
+      category: formData.category,
+      icon: formData.icon,
+      command: formData.command,
+      platform: getCurrentPlatform(),
+      timeout: 10000,
+      security: {
+        requirePin: false,
+        whitelist: true
+      },
+      updatedAt: new Date().toISOString()
+    }
+    
+    onSave(updatedCommand)
+  }
+  
+  const getCurrentPlatform = () => {
+    const platform = navigator.platform.toLowerCase()
+    if (platform.includes('win')) return 'windows'
+    if (platform.includes('mac')) return 'darwin'
+    return 'linux'
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40">
+      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900">编辑命令</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-xl"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">命令名称</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={2}
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">分类</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {Object.entries(categoryInfo).map(([key, info]) => (
+                  <option key={key} value={key}>{info.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">图标</label>
+              <input
+                type="text"
+                value={formData.icon}
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="💻"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">命令内容</label>
+            <textarea
+              value={formData.command}
+              onChange={(e) => setFormData({ ...formData, command: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+              rows={4}
+              required
+              placeholder="输入要执行的命令..."
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-all"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all"
+            >
+              保存修改
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // 添加命令模态框
 const AddCommandModal = ({ isOpen, onClose, onConfigure }: {
   isOpen: boolean;
@@ -295,6 +461,7 @@ export default function Commands() {
   const [configureTemplate, setConfigureTemplate] = useState<CommandTemplate | null>(null)
   const [configureMode, setConfigureMode] = useState<'add' | 'execute' | 'both'>('both')
   const [editingCommand, setEditingCommand] = useState<DisplayCommand | null>(null)
+  const [showDirectEdit, setShowDirectEdit] = useState(false)
   const fetchingRef = useRef(false)
 
   // 获取命令列表
@@ -308,35 +475,31 @@ export default function Commands() {
     fetchingRef.current = true
     try {
       console.log('Fetching commands from API...')
-      // 首先尝试从 controller agent 获取
-      const response = await fetch('/api/v1/commands')
-      if (response.ok) {
-        const data = await response.json()
-        console.log('API response:', data)
-        const parsedCommands = parseCommandsFromAPI(data)
-        console.log('Parsed commands:', parsedCommands)
-        setCommands(parsedCommands)
-      } else {
-        console.log('API not available, loading from localStorage')
-        // 如果 API 不可用，从本地存储获取
+      // 优先从后端 API 获取
+      const data = await commandAPI.getCommands()
+      console.log('API response:', data)
+      const parsedCommands = parseCommandsFromAPI(data)
+      console.log('Parsed commands:', parsedCommands)
+      setCommands(parsedCommands)
+      
+      // 同步到本地存储作为备份
+      saveCommands(parsedCommands)
+    } catch (error) {
+      console.error('Failed to fetch commands from API:', error)
+      // 后端不可用时，从本地存储获取
+      try {
         const savedCommands = localStorage.getItem('lazy-ctrl-commands')
         if (savedCommands) {
           const rawCommands = JSON.parse(savedCommands) as Command[]
           const displayCommands = groupCommandsForDisplay(rawCommands)
           setCommands(displayCommands)
+          console.log('Loaded commands from localStorage as fallback')
         } else {
           setCommands([])
+          console.log('No commands found in localStorage')
         }
-      }
-    } catch (error) {
-      console.error('Failed to fetch commands:', error)
-      // 从本地存储获取
-      const savedCommands = localStorage.getItem('lazy-ctrl-commands')
-      if (savedCommands) {
-        const rawCommands = JSON.parse(savedCommands) as Command[]
-        const displayCommands = groupCommandsForDisplay(rawCommands)
-        setCommands(displayCommands)
-      } else {
+      } catch (localError) {
+        console.error('Failed to load from localStorage:', localError)
         setCommands([])
       }
     } finally {
@@ -438,7 +601,7 @@ export default function Commands() {
     return icons[category] || '📋'
   }
 
-  // 保存命令到本地存储
+  // 保存命令到本地存储（作为备份）
   const saveCommands = (displayCommands: DisplayCommand[]) => {
     // 将显示命令转换为原始命令列表保存
     const rawCommands: Command[] = []
@@ -450,29 +613,69 @@ export default function Commands() {
   
   // 添加新命令
   const addCommand = async (template: CommandTemplate, params?: Record<string, any>) => {
-    let processedTemplate = template
-    
-    // 如果有参数，需要替换命令中的占位符
-    if (params && Object.keys(params).length > 0) {
-      processedTemplate = {
-        ...template,
-        platforms: Object.fromEntries(
-          Object.entries(template.platforms).map(([platform, command]) => [
-            platform,
-            replaceCommandParams(command, params)
-          ])
-        )
+    try {
+      let processedTemplate = template
+      
+      // 如果有参数，需要替换命令中的占位符
+      if (params && Object.keys(params).length > 0) {
+        processedTemplate = {
+          ...template,
+          platforms: Object.fromEntries(
+            Object.entries(template.platforms).map(([platform, command]) => [
+              platform,
+              replaceCommandParams(command, params)
+            ])
+          )
+        }
       }
+      
+      // 获取当前平台的命令
+      const currentPlatform = getCurrentPlatform()
+      const platformCommand = processedTemplate.platforms[currentPlatform] || processedTemplate.platforms.all
+      
+      if (!platformCommand || typeof platformCommand !== 'string') {
+        throw new Error('当前平台不支持该命令')
+      }
+      
+      // 生成唯一ID
+      const commandId = `${template.templateId}_${Date.now()}`
+      
+      // 构建命令请求数据
+      const commandRequest: CreateCommandRequest = {
+        id: commandId,
+        name: template.name + (params ? ` (${Object.values(params).join(', ')})` : ''),
+        description: template.description,
+        category: template.category,
+        icon: template.icon,
+        command: platformCommand,
+        platform: currentPlatform,
+        templateId: template.templateId,
+        templateParams: params,
+        userId: 'local',
+        deviceId: 'default',
+        timeout: 10000,
+        security: {
+          requirePin: false,
+          whitelist: true
+        },
+        homeLayout: {
+          showOnHome: false
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      // 保存到后端
+      await commandAPI.createCommand(commandRequest)
+      
+      // 重新获取命令列表
+      await fetchCommands()
+      
+      showToast(`命令 "${commandRequest.name}" 已添加`, 'success')
+    } catch (error) {
+      console.error('Failed to add command:', error)
+      showToast(`添加命令失败: ${error}`, 'error')
     }
-    
-    const newCommands = templateToCommands(processedTemplate)
-    const newDisplayCommand = groupCommandsForDisplay(newCommands)[0]
-    
-    const updatedCommands = [...commands, newDisplayCommand]
-    setCommands(updatedCommands)
-    saveCommands(updatedCommands)
-    
-    showToast(`命令 "${newDisplayCommand.name}" 已添加`, 'success')
   }
   
   // 替换命令中的参数占位符
@@ -513,6 +716,26 @@ export default function Commands() {
       setConfigureTemplate(template)
       setConfigureMode('execute')
       setEditingCommand(command)
+    }
+  }
+  
+  // 直接编辑命令信息
+  const handleDirectEdit = (command: DisplayCommand) => {
+    setEditingCommand(command)
+    setShowDirectEdit(true)
+  }
+  
+  // 保存直接编辑的命令
+  const handleDirectEditSave = async (updatedCommand: CreateCommandRequest) => {
+    try {
+      await commandAPI.updateCommand(updatedCommand.id, updatedCommand)
+      await fetchCommands()
+      setShowDirectEdit(false)
+      setEditingCommand(null)
+      showToast('命令修改成功', 'success')
+    } catch (error) {
+      console.error('Failed to update command:', error)
+      showToast(`修改命令失败: ${error}`, 'error')
     }
   }
   
@@ -577,37 +800,80 @@ export default function Commands() {
   // 删除命令
   const deleteCommand = async (commandId: string) => {
     if (confirm('确定要删除这个命令吗？')) {
-      const updatedCommands = commands.filter(cmd => cmd.id !== commandId)
-      setCommands(updatedCommands)
-      saveCommands(updatedCommands)
-      showToast('命令已删除', 'success')
+      try {
+        await commandAPI.deleteCommand(commandId)
+        await fetchCommands()
+        showToast('命令已删除', 'success')
+      } catch (error) {
+        console.error('Failed to delete command:', error)
+        showToast(`删除命令失败: ${error}`, 'error')
+      }
     }
   }
   
   // 添加命令到主页布局
-  const addToLayout = (displayCommand: DisplayCommand) => {
+  const addToLayout = async (displayCommand: DisplayCommand) => {
     try {
-      const success = LayoutService.addCommandToLayout(displayCommand.id)
+      // 首先更新后端的homeLayout配置
+      const commandRequest: CreateCommandRequest = {
+        id: displayCommand.id,
+        name: displayCommand.name,
+        description: displayCommand.description || '',
+        category: displayCommand.category,
+        icon: displayCommand.icon,
+        command: displayCommand.commands[0]?.command || '',
+        platform: displayCommand.commands[0]?.platform || getCurrentPlatform(),
+        templateId: displayCommand.commands[0]?.templateId,
+        templateParams: displayCommand.commands[0]?.templateParams,
+        userId: displayCommand.commands[0]?.userId || 'local',
+        deviceId: displayCommand.commands[0]?.deviceId || 'default',
+        timeout: 10000,
+        security: {
+          requirePin: false,
+          whitelist: true
+        },
+        homeLayout: {
+          showOnHome: true,
+          defaultPosition: {
+            x: 0,
+            y: 0,
+            w: 2,
+            h: 1
+          },
+          color: '',
+          priority: 0
+        },
+        updatedAt: new Date().toISOString()
+      }
+      
+      await commandAPI.updateCommand(displayCommand.id, commandRequest)
+      
+      // 然后添加到本地布局管理
+      const success = await LayoutService.addCommandToLayout(displayCommand.id)
       if (success) {
+        await fetchCommands() // 重新获取数据以保持同步
         showToast(`"${displayCommand.name}" 已添加到主页`, 'success')
       } else {
         showToast('添加失败，请确保主页已加载', 'error')
       }
     } catch (error) {
       console.error('Add to layout failed:', error)
-      showToast('添加失败', 'error')
+      showToast(`添加失败: ${error}`, 'error')
     }
   }
 
   // 执行命令
   const executeCommand = async (commandId: string) => {
     try {
-      const response = await fetch(`/api/v1/execute?id=${commandId}`)
-      const result = await response.text()
+      const result = await commandAPI.executeCommand(commandId)
       console.log('Command result:', result)
       
       const command = commands.find(c => c.id === commandId)
-      showToast(`命令 "${command?.name || commandId}" 执行成功`, 'success')
+      if (result.success) {
+        showToast(`命令 "${command?.name || commandId}" 执行成功`, 'success')
+      } else {
+        showToast(`命令执行失败: ${result.error || '未知错误'}`, 'error')
+      }
     } catch (error) {
       console.error('Command execution failed:', error)
       showToast(`命令执行失败: ${error}`, 'error')
@@ -740,6 +1006,7 @@ export default function Commands() {
               onAddToLayout={addToLayout}
               onDelete={deleteCommand}
               onEditConfig={isConfigurable ? handleCommandEdit : undefined}
+              onDirectEdit={handleDirectEdit}
             />
           )
         })}
@@ -785,6 +1052,17 @@ export default function Commands() {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onConfigure={handleTemplateConfiguration}
+      />
+      
+      {/* 直接编辑模态框 */}
+      <DirectEditModal
+        isOpen={showDirectEdit}
+        onClose={() => {
+          setShowDirectEdit(false)
+          setEditingCommand(null)
+        }}
+        command={editingCommand}
+        onSave={handleDirectEditSave}
       />
       
       {/* 参数配置模态框 */}

@@ -123,9 +123,48 @@ func (h *CommandHandler) HandleReloadConfig(c *gin.Context) {
 //	@Security		PinAuth
 //	@Router			/commands [post]
 func (h *CommandHandler) CreateCommand(c *gin.Context) {
-	// TODO: 创建命令的实现
-	c.JSON(http.StatusNotImplemented, gin.H{
-		"error": "Not implemented yet",
+	var cmd config.Command
+	if err := c.ShouldBindJSON(&cmd); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request format: " + err.Error(),
+		})
+		return
+	}
+
+	// 验证必需字段
+	if cmd.ID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Command ID is required",
+		})
+		return
+	}
+
+	if cmd.Command == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Command string is required",
+		})
+		return
+	}
+
+	// 检查命令是否已存在
+	if _, exists := h.commandService.GetCommand(cmd.ID); exists {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "Command with this ID already exists",
+		})
+		return
+	}
+
+	// 创建命令
+	if err := h.commandService.CreateCommand(&cmd); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to create command: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Command created successfully",
+		"id":      cmd.ID,
 	})
 }
 
@@ -148,9 +187,43 @@ func (h *CommandHandler) CreateCommand(c *gin.Context) {
 //	@Security		PinAuth
 //	@Router			/commands/{id} [put]
 func (h *CommandHandler) UpdateCommand(c *gin.Context) {
-	// TODO: 修改命令的实现
-	c.JSON(http.StatusNotImplemented, gin.H{
-		"error": "Not implemented yet",
+	commandID := c.Param("id")
+	if commandID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Command ID is required",
+		})
+		return
+	}
+
+	// 检查命令是否存在
+	if _, exists := h.commandService.GetCommand(commandID); !exists {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Command not found",
+		})
+		return
+	}
+
+	var cmd config.Command
+	if err := c.ShouldBindJSON(&cmd); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request format: " + err.Error(),
+		})
+		return
+	}
+
+	// 确保ID一致
+	cmd.ID = commandID
+
+	// 更新命令
+	if err := h.commandService.UpdateCommand(&cmd); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to update command: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Command updated successfully",
 	})
 }
 
@@ -171,8 +244,31 @@ func (h *CommandHandler) UpdateCommand(c *gin.Context) {
 //	@Security		PinAuth
 //	@Router			/commands/{id} [delete]
 func (h *CommandHandler) DeleteCommand(c *gin.Context) {
-	// TODO: 删除命令的实现
-	c.JSON(http.StatusNotImplemented, gin.H{
-		"error": "Not implemented yet",
+	commandID := c.Param("id")
+	if commandID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Command ID is required",
+		})
+		return
+	}
+
+	// 检查命令是否存在
+	if _, exists := h.commandService.GetCommand(commandID); !exists {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Command not found",
+		})
+		return
+	}
+
+	// 删除命令
+	if err := h.commandService.DeleteCommand(commandID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete command: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Command deleted successfully",
 	})
 }

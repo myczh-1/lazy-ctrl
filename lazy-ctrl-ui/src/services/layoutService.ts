@@ -2,6 +2,7 @@ import type { CardConfig } from '@/types/layout'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useCommandStore } from '@/stores/commandStore'
 import { CommandService } from './commandService'
+import commandAPI, { type CreateCommandRequest } from '@/api/commandAPI'
 
 export class LayoutService {
   /**
@@ -18,13 +19,19 @@ export class LayoutService {
       // 没有存储数据，使用后端命令创建默认布局
       const availableCards = this.createCardsFromCommands(commands)
       if (availableCards.length > 0) {
-        const defaultLayout = availableCards.slice(0, 6).map((card, index) => ({
-          i: card.id,
-          x: index % 4,
-          y: Math.floor(index / 4),
-          w: 1,
-          h: 1
-        }))
+        // 使用后端返回的位置信息创建布局
+        const defaultLayout = availableCards.map(card => {
+          const command = commands.find(cmd => cmd.id === card.commandId)
+          const position = command?.homepagePosition
+          
+          return {
+            i: card.id,
+            x: position?.x || 0,
+            y: position?.y || 0,
+            w: position?.width || 1,
+            h: position?.height || 1
+          }
+        })
         loadLayout(defaultLayout, availableCards)
         console.log('Initialized layout with backend commands:', availableCards.length)
       }
@@ -36,7 +43,7 @@ export class LayoutService {
    */
   static createCardsFromCommands(commands: any[]): CardConfig[] {
     return commands
-      .filter(cmd => cmd.available)
+      .filter(cmd => cmd.available && cmd.showOnHomepage)
       .map(cmd => ({
         id: cmd.id,
         title: cmd.name || cmd.id,
@@ -53,7 +60,7 @@ export class LayoutService {
   /**
    * 添加命令到布局
    */
-  static addCommandToLayout(commandId: string): boolean {
+  static async addCommandToLayout(commandId: string): Promise<boolean> {
     const { getCommandById } = useCommandStore.getState()
     const { addCard } = useLayoutStore.getState()
     
@@ -76,7 +83,7 @@ export class LayoutService {
     }
 
     addCard(card)
-    this.saveLayout()
+    await this.saveLayout()
     return true
   }
 
@@ -101,11 +108,76 @@ export class LayoutService {
   }
 
   /**
-   * 保存布局到 localStorage
+   * 保存布局到 localStorage 和后端
    */
-  static saveLayout(): void {
-    const { saveToLocalStorage } = useLayoutStore.getState()
+  static async saveLayout(): Promise<void> {
+    const { saveToLocalStorage, layout, cards } = useLayoutStore.getState()
+    
+    // 保存到本地存储
     saveToLocalStorage()
+    
+    // 同步到后端：更新命令的homeLayout配置
+    try {
+      const updatePromises = cards.map(async (card) => {
+        if (!card.commandId) return
+        
+        // 查找对应的布局项
+        const layoutItem = layout.find(item => item.i === card.id)
+        if (!layoutItem) return
+        
+        // 获取命令详情
+        const { getCommandById } = useCommandStore.getState()
+        const command = getCommandById(card.commandId)
+        if (!command) return
+        
+        // 构建更新请求
+        const commandRequest: CreateCommandRequest = {
+          id: command.id,
+          name: command.name,
+          description: command.description || '',
+          category: command.category,
+          icon: command.icon,
+          command: command.command || '',
+          platform: this.getCurrentPlatform(),
+          timeout: command.timeout || 10000,
+          security: {
+            requirePin: command.requiresPin || false,
+            whitelist: command.available !== false
+          },
+          homeLayout: {
+            showOnHome: true,
+            defaultPosition: {
+              x: layoutItem.x,
+              y: layoutItem.y,
+              w: layoutItem.w,
+              h: layoutItem.h
+            },
+            color: '',
+            priority: 0
+          },
+          updatedAt: new Date().toISOString()
+        }
+        
+        // 更新后端
+        await commandAPI.updateCommand(command.id, commandRequest)
+      })
+      
+      await Promise.all(updatePromises)
+      console.log('Layout synced to backend successfully')
+    } catch (error) {
+      console.error('Failed to sync layout to backend:', error)
+      // 不阻止本地保存，即使同步失败
+    }
+  }
+  
+  /**
+   * 获取当前平台
+   */
+  private static getCurrentPlatform(): string {
+    const platform = navigator.platform.toLowerCase()
+    if (platform.includes('win')) return 'windows'
+    if (platform.includes('mac')) return 'darwin'
+    return 'linux'
   }
 
   /**
@@ -119,7 +191,7 @@ export class LayoutService {
   /**
    * 更改卡片尺寸
    */
-  static changeCardSize(cardId: string, size: 'small' | 'medium' | 'large'): void {
+  static async changeCardSize(cardId: string, size: 'small' | 'medium' | 'large'): Promise<void> {
     const { layout, setLayout } = useLayoutStore.getState()
     
     const sizeMap = {
@@ -133,7 +205,7 @@ export class LayoutService {
     )
     
     setLayout(newLayout)
-    this.saveLayout()
+    await this.saveLayout()
   }
 
   /**
@@ -167,11 +239,11 @@ export class LayoutService {
   /**
    * 导入布局配置
    */
-  static importLayout(data: any): void {
+  static async importLayout(data: any): Promise<void> {
     const { loadLayout } = useLayoutStore.getState()
     if (data.layout && data.cards) {
       loadLayout(data.layout, data.cards)
-      this.saveLayout()
+      await this.saveLayout()
     }
   }
 }

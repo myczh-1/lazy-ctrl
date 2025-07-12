@@ -10,6 +10,50 @@ export interface CommandInfo {
   whitelisted: boolean
   available: boolean
   command?: string
+  showOnHomepage?: boolean
+  homepagePosition?: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
+  homepageColor?: string
+  homepagePriority?: number
+}
+
+// 创建命令的请求数据结构
+export interface CreateCommandRequest {
+  id: string
+  name?: string
+  description?: string
+  category?: string
+  icon?: string
+  command: string
+  platform: string
+  commandType?: string
+  security?: {
+    requirePin: boolean
+    whitelist: boolean
+    adminOnly?: boolean
+  }
+  timeout?: number
+  userId?: string
+  deviceId?: string
+  homeLayout?: {
+    showOnHome: boolean
+    defaultPosition?: {
+      x: number
+      y: number
+      w: number
+      h: number
+    }
+    color?: string
+    priority?: number
+  }
+  templateId?: string
+  templateParams?: Record<string, any>
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface CommandResponse {
@@ -121,6 +165,35 @@ export class CommandAPI {
    */
   async health(): Promise<{ status: string; timestamp: number }> {
     return this.request<{ status: string; timestamp: number }>('/api/v1/health')
+  }
+
+  /**
+   * 创建新命令
+   */
+  async createCommand(command: CreateCommandRequest): Promise<{ message: string; id: string }> {
+    return this.request<{ message: string; id: string }>('/api/v1/commands', {
+      method: 'POST',
+      body: JSON.stringify(command),
+    })
+  }
+
+  /**
+   * 更新命令
+   */
+  async updateCommand(id: string, command: CreateCommandRequest): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/v1/commands/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(command),
+    })
+  }
+
+  /**
+   * 删除命令
+   */
+  async deleteCommand(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/v1/commands/${id}`, {
+      method: 'DELETE',
+    })
   }
 
 }
