@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import type { UIConfig, UIParam, CommandTemplate } from '@/types/command'
-import type { Command } from '@/types/command'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
+import type { UIParam } from '@/types/command'
+import type { CommandTemplate } from '@/data/commandTemplates'
 
 interface ParameterFormProps {
   template: CommandTemplate
@@ -12,7 +12,7 @@ interface ParameterFormProps {
 }
 
 // 单个参数输入组件
-const ParameterInput = ({ param, value, onChange }: {
+const ParameterInput = memo(({ param, value, onChange }: {
   param: UIParam
   value: any
   onChange: (value: any) => void
@@ -141,7 +141,7 @@ const ParameterInput = ({ param, value, onChange }: {
       )}
     </div>
   )
-}
+})
 
 // 命令预览组件
 const CommandPreview = ({ template, params }: {
@@ -216,40 +216,39 @@ export default function ParameterForm({
   mode = 'both',
   initialParams = {}
 }: ParameterFormProps) {
-  const [params, setParams] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const uiConfig = template.ui!
   
-  // 初始化默认值和初始参数
-  useEffect(() => {
-    const defaultParams: Record<string, any> = {}
+  // 使用useMemo来缓存默认参数计算，避免无限循环
+  const defaultParams = useMemo(() => {
+    const params: Record<string, any> = {}
     uiConfig.params.forEach(param => {
-      if (initialParams[param.key] !== undefined) {
-        defaultParams[param.key] = initialParams[param.key]
+      if (initialParams && initialParams[param.key] !== undefined) {
+        params[param.key] = initialParams[param.key]
       } else if (param.default !== undefined) {
-        defaultParams[param.key] = param.default
+        params[param.key] = param.default
       } else if (param.type === 'range' && param.min !== undefined) {
         // 滑块类型如果没有默认值，使用最小值
-        defaultParams[param.key] = param.min
+        params[param.key] = param.min
       }
     })
-    setParams(defaultParams)
-    console.log('初始化参数:', defaultParams) // 调试日志
-  }, [uiConfig, initialParams])
+    return params
+  }, [uiConfig.params, initialParams])
+  
+  // 直接使用defaultParams作为初始值，避免useEffect
+  const [params, setParams] = useState<Record<string, any>>(defaultParams)
 
-  const updateParam = (key: string, value: any) => {
-    console.log('更新参数:', key, '=', value) // 调试日志
+  const updateParam = useCallback((key: string, value: any) => {
     setParams(prev => {
       const newParams = { ...prev, [key]: value }
-      console.log('新参数状态:', newParams) // 调试日志
       return newParams
     })
     // 清除该字段的错误
     if (errors[key]) {
       setErrors(prev => ({ ...prev, [key]: '' }))
     }
-  }
+  }, [errors])
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
@@ -392,29 +391,6 @@ export default function ParameterForm({
         </div>
       </div>
 
-      {/* 滑块样式 */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .slider::-webkit-slider-thumb {
-            appearance: none;
-            height: 20px;
-            width: 20px;
-            border-radius: 50%;
-            background: #3b82f6;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-          }
-          .slider::-moz-range-thumb {
-            height: 20px;
-            width: 20px;
-            border-radius: 50%;
-            background: #3b82f6;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-          }
-        `
-      }} />
     </div>
   )
 }
