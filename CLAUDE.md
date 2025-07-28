@@ -4,27 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Architecture
 
-lazy-ctrl is a multi-component system for remote computer control consisting of:
+lazy-ctrl is an integrated remote computer control system consisting of:
 
-1. **Controller Agent (Go)** - Local computer agent that executes system commands
+1. **Controller Agent (Go)** - Integrated control server with multi-protocol support
    - Location: `controller-agent/`
-   - Serves HTTP API on port 7070
-   - Loads command mappings from `config/commands.json`
-   - Executes shell commands via executor package
+   - **HTTP Server**: REST API on port 7070
+   - **gRPC Server**: gRPC API on port 7071
+   - **MQTT Client**: IoT platform integration support
+   - **Integrated Features**:
+     - Command configuration management (CRUD operations)
+     - User authentication (PIN-based security)
+     - Security controls (rate limiting, whitelist)
+     - Homepage layout management
+     - Real-time command execution
+     - Swagger API documentation
 
-2. **Config Service (Node.js + Midway)** - Configuration management service
-   - Location: `config-service/` (to be implemented)
-   - Manages command configurations via REST API
-   - Provides bridge between frontend and controller agent
-
-3. **Control Frontend (React + Vite)** - User interface
+2. **Control Frontend (React + Vite)** - Complete web interface
    - Location: `lazy-ctrl-ui/`
    - Web interface for controlling local computer
    - Features: command templates, layout management, real-time execution
+   - Responsive design with mobile support
 
-4. **Cloud Gateway (Node.js)** - Optional cloud relay service
-   - Location: `cloud-gateway/` (to be implemented)
-   - Handles remote device control and user authentication
+**Note**: Config Service and Cloud Gateway have been integrated into the Controller Agent for simplified deployment.
 
 ## Development Commands
 
@@ -56,11 +57,24 @@ pnpm install          # Install dependencies for all packages
 
 ## API Endpoints
 
-### Controller Agent
+### Controller Agent (HTTP API - Port 7070)
 - `GET /api/v1/commands` - Get all available commands
+- `POST /api/v1/commands` - Create new command
+- `PUT /api/v1/commands/{id}` - Update command configuration
+- `DELETE /api/v1/commands/{id}` - Delete command
 - `GET /api/v1/execute?id={command_id}` - Execute registered command by ID
 - `POST /api/v1/reload` - Reload command configuration
 - `GET /api/v1/health` - Health check
+- `POST /api/v1/auth/verify` - PIN verification
+- `GET /api/v1/docs` - Swagger API documentation
+
+### Controller Agent (gRPC API - Port 7071)
+- Full gRPC service mirror of HTTP API
+- Protocol buffer definitions in `/proto` directory
+
+### Controller Agent (MQTT Client)
+- Configurable MQTT broker connection
+- Support for third-party IoT platforms (Aliyun, Tencent Cloud)
 
 ### Frontend Architecture
 - **Command Templates**: Built-in templates for common commands
@@ -70,17 +84,26 @@ pnpm install          # Install dependencies for all packages
 
 ## Command Registration
 
-Commands are registered in `controller-agent/config/commands.json` with format:
+Commands are registered via API or stored in `controller-agent/config/commands.json` with v3.0 format:
 ```json
 {
-  "command_id": "shell_command_or_script_path"
+  "command_id": {
+    "name": "Command Name",
+    "command": "shell_command_or_script_path",
+    "description": "Command description",
+    "showOnHomePage": true,
+    "position": {"x": 0, "y": 0, "w": 2, "h": 1},
+    "color": "#blue"
+  }
 }
 ```
 
 ## Module Dependencies
 
-The controller agent uses a simple HTTP server with internal packages:
-- `internal/handler` - HTTP request handling and command lookup
-- `internal/executor` - Shell command execution wrapper
-
-Future Node.js services will use Midway framework for dependency injection and service architecture.
+The controller agent uses a modular architecture with internal packages:
+- `internal/handler` - HTTP/gRPC request handling and routing
+- `internal/executor` - Cross-platform shell command execution
+- `internal/config` - Configuration management and validation
+- `internal/security` - Authentication, rate limiting, and security controls
+- `internal/mqtt` - MQTT client integration
+- `proto/` - Protocol buffer definitions for gRPC

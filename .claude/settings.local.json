@@ -19,7 +19,10 @@
       "Bash(mv:*)",
       "Bash(swag init:*)",
       "Bash(go run:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(npm run dev:*)",
+      "Bash(rm:*)",
+      "Bash(timeout:*)"
     ],
     "deny": []
   }
