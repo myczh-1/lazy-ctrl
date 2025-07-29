@@ -14,9 +14,45 @@ export class CommandService {
       setError(null)
       
       const response = await commandAPI.getCommands()
-      setCommands(response.commands)
       
-      console.log(`Loaded ${response.commands.length} commands`)
+      // 处理后端的统一响应格式
+      let commands = []
+      if (response.success && response.data) {
+        commands = Array.isArray(response.data) ? response.data : []
+      } else {
+        // 兼容旧格式
+        commands = Array.isArray(response.data) ? response.data : []
+      }
+      
+      // 数据转换和兼容性处理
+      const processedCommands = commands.map((cmd: any) => ({
+        id: cmd.id,
+        name: cmd.name || '',
+        description: cmd.description || '',
+        category: cmd.category || '',
+        icon: cmd.icon || '',
+        timeout: cmd.timeout || 10000,
+        requiresPin: cmd.requiresPin || false,
+        whitelisted: cmd.whitelisted !== false, // 默认为true
+        available: cmd.available !== false, // 默认为true
+        command: cmd.command || '',
+        showOnHomepage: cmd.showOnHomepage !== false, // 默认为true
+        homepagePosition: cmd.homepagePosition ? {
+          x: cmd.homepagePosition.x || 0,
+          y: cmd.homepagePosition.y || 0,
+          width: cmd.homepagePosition.width || 1,
+          height: cmd.homepagePosition.height || 1
+        } : { x: 0, y: 0, width: 1, height: 1 },
+        homepageColor: cmd.homepageColor || '',
+        homepagePriority: cmd.homepagePriority || 0
+      }))
+      
+      setCommands(processedCommands)
+      
+      console.log(`Loaded ${processedCommands.length} commands`)
+      console.log('Available commands:', processedCommands.filter(cmd => cmd.available).length)
+      console.log('Homepage commands:', processedCommands.filter(cmd => cmd.showOnHomepage).length)
+      console.log('Commands data:', processedCommands)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '获取命令列表失败'
       setError(errorMessage)

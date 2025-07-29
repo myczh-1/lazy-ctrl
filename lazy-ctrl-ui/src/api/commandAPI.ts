@@ -57,8 +57,10 @@ export interface CreateCommandRequest {
 }
 
 export interface CommandResponse {
-  version: string
-  commands: CommandInfo[]
+  success: boolean
+  data: CommandInfo[]
+  timestamp?: string
+  requestId?: string
 }
 
 export interface ExecutionResult {
