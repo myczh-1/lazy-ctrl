@@ -1,130 +1,157 @@
 {
-  "version": "3.0",
   "commands": [
     {
+      "category": "音频控制",
+      "command": "",
+      "createdAt": "2024-06-30T00:00:00Z",
+      "description": "切换系统音频静音状态",
+      "homeLayout": {
+        "ShowOnHome": true,
+        "DefaultPosition": {
+          "X": 0,
+          "Y": 0,
+          "Width": 0,
+          "Height": 0
+        },
+        "Color": "",
+        "Priority": 0
+      },
+      "icon": "volume-mute",
       "id": "mute_cmd_001",
       "name": "静音",
-      "description": "切换系统音频静音状态",
-      "category": "音频控制",
-      "icon": "volume-mute",
-      "command": "",
       "platform": "windows",
       "security": {
-        "requirePin": false,
-        "whitelist": false
+        "RequirePin": false,
+        "Whitelist": false,
+        "AdminOnly": false
       },
       "timeout": 3000,
-      "homeLayout": {
-        "showOnHome": true,
-        "defaultPosition": {
-          "x": 0,
-          "y": 0,
-          "w": 2,
-          "h": 2
-        }
-      },
-      "createdAt": "2024-06-30T00:00:00Z",
       "updatedAt": "2025-07-17T22:39:59+08:00"
     },
     {
+      "category": "音频控制",
+      "command": "",
+      "createdAt": "2024-06-30T00:00:00Z",
+      "description": "取消系统音频静音状态",
+      "homeLayout": {
+        "ShowOnHome": true,
+        "DefaultPosition": {
+          "X": 2,
+          "Y": 0,
+          "Width": 0,
+          "Height": 0
+        },
+        "Color": "",
+        "Priority": 0
+      },
+      "icon": "volume-up",
       "id": "unmute_cmd_002",
       "name": "取消静音",
-      "description": "取消系统音频静音状态",
-      "category": "音频控制",
-      "icon": "volume-up",
-      "command": "",
       "platform": "windows",
       "security": {
-        "requirePin": false,
-        "whitelist": false
+        "RequirePin": false,
+        "Whitelist": false,
+        "AdminOnly": false
       },
       "timeout": 3000,
-      "homeLayout": {
-        "showOnHome": true,
-        "defaultPosition": {
-          "x": 2,
-          "y": 0,
-          "w": 2,
-          "h": 1
-        }
-      },
-      "createdAt": "2024-06-30T00:00:00Z",
       "updatedAt": "2025-07-17T22:39:59+08:00"
     },
     {
+      "category": "系统控制",
+      "command": "",
+      "createdAt": "2024-06-30T00:00:00Z",
+      "description": "锁定计算机屏幕",
+      "homeLayout": {
+        "ShowOnHome": true,
+        "DefaultPosition": {
+          "X": 2,
+          "Y": 1,
+          "Width": 0,
+          "Height": 0
+        },
+        "Color": "",
+        "Priority": 0
+      },
+      "icon": "lock",
       "id": "lock_cmd_003",
       "name": "锁屏",
-      "description": "锁定计算机屏幕",
-      "category": "系统控制",
-      "icon": "lock",
-      "command": "",
       "platform": "windows",
       "security": {
-        "requirePin": false,
-        "whitelist": false
+        "RequirePin": false,
+        "Whitelist": false,
+        "AdminOnly": false
       },
       "timeout": 5000,
-      "homeLayout": {
-        "showOnHome": true,
-        "defaultPosition": {
-          "x": 2,
-          "y": 1,
-          "w": 1,
-          "h": 1
-        }
-      },
-      "createdAt": "2024-06-30T00:00:00Z",
       "updatedAt": "2025-07-17T22:39:59+08:00"
     },
     {
+      "category": "音频控制",
+      "command": "osascript -e 'set volume output volume (output volume of (get volume settings) + 10)'",
+      "createdAt": "2024-06-30T00:00:00Z",
+      "description": "增加系统音量",
+      "homeLayout": {
+        "ShowOnHome": true,
+        "DefaultPosition": {
+          "X": 3,
+          "Y": 0,
+          "Width": 0,
+          "Height": 0
+        },
+        "Color": "",
+        "Priority": 0
+      },
+      "icon": "volume-plus",
       "id": "volume_up_cmd_004",
       "name": "音量+",
-      "description": "增加系统音量",
-      "category": "音频控制",
-      "icon": "volume-plus",
-      "command": "osascript -e 'set volume output volume (output volume of (get volume settings) + 10)'",
       "platform": "darwin",
       "security": {
-        "requirePin": false,
-        "whitelist": true
+        "RequirePin": false,
+        "Whitelist": true,
+        "AdminOnly": false
       },
       "timeout": 2000,
-      "homeLayout": {
-        "showOnHome": true,
-        "defaultPosition": {
-          "x": 3,
-          "y": 0,
-          "w": 1,
-          "h": 1
-        }
-      },
-      "createdAt": "2024-06-30T00:00:00Z",
-      "updatedAt": "2025-07-12T13:27:47+08:00"
+      "updatedAt": "2025-07-31T13:17:04+08:00"
     },
     {
+      "category": "开发工具",
+      "command": "code /Volumes/WorkDisk/WorkDocuments/project/FULL/lazy-ctrl",
+      "createdAt": "2024-06-30T00:00:00Z",
+      "description": "在VS Code中打开当前项目",
+      "homeLayout": {
+        "ShowOnHome": true,
+        "DefaultPosition": {
+          "X": 0,
+          "Y": 3,
+          "Width": 0,
+          "Height": 0
+        },
+        "Color": "",
+        "Priority": 0
+      },
+      "icon": "folder",
       "id": "custom_project_cmd_005",
       "name": "打开我的项目",
-      "description": "在VS Code中打开当前项目",
-      "category": "开发工具",
-      "icon": "folder",
-      "command": "code /Volumes/WorkDisk/WorkDocuments/project/FULL/lazy-ctrl",
       "platform": "darwin",
       "security": {
-        "requirePin": false,
-        "whitelist": true
+        "RequirePin": false,
+        "Whitelist": true,
+        "AdminOnly": false
       },
       "timeout": 10000,
-      "homeLayout": {
-        "showOnHome": true,
-        "defaultPosition": {
-          "x": 0,
-          "y": 3,
-          "w": 4,
-          "h": 2
-        }
-      },
-      "createdAt": "2024-06-30T00:00:00Z",
-      "updatedAt": "2025-07-12T13:27:47+08:00"
+      "updatedAt": "2025-07-31T13:17:04+08:00"
+    },
+    {
+      "category": "",
+      "command": "osascript -e \"set volume output volume 20\"",
+      "createdAt": "2025-07-31T12:48:58+08:00",
+      "description": "",
+      "icon": "",
+      "id": "audio_volume_set_1753937338376",
+      "name": "设置音量 (50)",
+      "platform": "darwin",
+      "timeout": 10000,
+      "updatedAt": "2025-07-31T13:17:04+08:00"
     }
-  ]
+  ],
+  "version": "3.0"
 }

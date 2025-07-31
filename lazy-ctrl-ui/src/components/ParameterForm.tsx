@@ -218,7 +218,27 @@ export default function ParameterForm({
 }: ParameterFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const uiConfig = template.ui!
+  // 检查 template.ui 是否存在
+  if (!template.ui) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg max-w-md w-full mx-4">
+          <div className="p-6 text-center">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">配置错误</h2>
+            <p className="text-gray-600 mb-6">此命令模板缺少UI配置信息，无法显示参数表单。</p>
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+            >
+              关闭
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const uiConfig = template.ui
   
   // 使用useMemo来缓存默认参数计算，避免无限循环
   const defaultParams = useMemo(() => {

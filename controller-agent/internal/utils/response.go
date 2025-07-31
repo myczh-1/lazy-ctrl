@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
-	
+
 	"github.com/gin-gonic/gin"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/common"
 )
@@ -31,7 +33,7 @@ func SuccessResponse(c *gin.Context, data interface{}) {
 		Timestamp: GetCurrentTimestamp(),
 		RequestID: GetRequestID(c),
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -43,7 +45,7 @@ func CreatedResponse(c *gin.Context, data interface{}) {
 		Timestamp: GetCurrentTimestamp(),
 		RequestID: GetRequestID(c),
 	}
-	
+
 	c.JSON(http.StatusCreated, response)
 }
 
@@ -59,7 +61,7 @@ func ErrorResponse(c *gin.Context, statusCode int, code, message string, details
 		Timestamp: GetCurrentTimestamp(),
 		RequestID: GetRequestID(c),
 	}
-	
+
 	c.JSON(statusCode, response)
 }
 
@@ -112,7 +114,7 @@ func ServiceUnavailableError(c *gin.Context, message string) {
 func HandleDomainError(c *gin.Context, err error) {
 	code := common.GetErrorCode(err)
 	context := common.GetErrorContext(err)
-	
+
 	switch code {
 	case "COMMAND_NOT_FOUND":
 		NotFoundError(c, err.Error())
@@ -138,5 +140,67 @@ func HandleDomainError(c *gin.Context, err error) {
 		InternalError(c, err.Error())
 	default:
 		InternalError(c, "An unexpected error occurred")
+	}
+}
+
+// responseWriter wraps gin.ResponseWriter to intercept JSON responses
+type responseWriter struct {
+	gin.ResponseWriter
+	body *bytes.Buffer
+}
+
+func (w *responseWriter) Write(b []byte) (int, error) {
+	w.body.Write(b)
+	return len(b), nil
+}
+
+func (w *responseWriter) WriteString(s string) (int, error) {
+	w.body.WriteString(s)
+	return len(s), nil
+}
+
+// ResponseFormatterMiddleware wraps gin responses with standard format
+func ResponseFormatterMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		w := &responseWriter{
+			ResponseWriter: c.Writer,
+			body:           &bytes.Buffer{},
+		}
+		c.Writer = w
+
+		c.Next()
+
+		// Only format successful JSON responses
+		statusCode := c.Writer.Status()
+		if statusCode >= 200 && statusCode < 300 && w.body.Len() > 0 {
+			var originalData interface{}
+			if err := json.Unmarshal(w.body.Bytes(), &originalData); err == nil {
+				// Skip if already formatted (contains success field)
+				if dataMap, ok := originalData.(map[string]interface{}); ok {
+					if _, hasSuccess := dataMap["success"]; hasSuccess {
+						// Already formatted, write original
+						w.ResponseWriter.Header().Set("Content-Type", "application/json; charset=utf-8")
+						w.ResponseWriter.Write(w.body.Bytes())
+						return
+					}
+				}
+
+				// Format the response
+				response := APIResponse{
+					Success:   true,
+					Data:      originalData,
+					Timestamp: GetCurrentTimestamp(),
+					RequestID: GetRequestID(c),
+				}
+
+				w.ResponseWriter.Header().Set("Content-Type", "application/json; charset=utf-8")
+				responseBytes, _ := json.Marshal(response)
+				w.ResponseWriter.Write(responseBytes)
+				return
+			}
+		}
+
+		// Write original response for non-JSON or error responses
+		w.ResponseWriter.Write(w.body.Bytes())
 	}
 }
