@@ -1,32 +1,42 @@
 {
   "commands": [
     {
-      "category": "音频控制",
-      "command": "",
-      "createdAt": "2024-06-30T00:00:00Z",
+      "category": "",
+      "command": "osascript -e \"set volume output volume 20\"",
+      "createdAt": "2025-07-31T12:48:58+08:00",
+      "description": "",
+      "icon": "",
+      "id": "audio_volume_set_1753937338376",
+      "name": "设置音量 (50)",
+      "platform": "darwin",
+      "timeout": 10000,
+      "updatedAt": "2025-07-31T13:17:04+08:00"
+    },
+    {
+      "category": "audio",
+      "command": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]173)\"",
+      "createdAt": "2025-07-31T22:20:01+08:00",
       "description": "切换系统音频静音状态",
+      "deviceId": "default",
       "homeLayout": {
-        "ShowOnHome": true,
-        "DefaultPosition": {
-          "X": 0,
-          "Y": 0,
-          "Width": 0,
-          "Height": 0
-        },
+        "ShowOnHome": false,
+        "DefaultPosition": null,
         "Color": "",
         "Priority": 0
       },
-      "icon": "volume-mute",
-      "id": "mute_cmd_001",
+      "icon": "🔇",
+      "id": "audio_mute_1753971601667",
       "name": "静音",
       "platform": "windows",
       "security": {
         "RequirePin": false,
-        "Whitelist": false,
+        "Whitelist": true,
         "AdminOnly": false
       },
-      "timeout": 3000,
-      "updatedAt": "2025-07-17T22:39:59+08:00"
+      "templateId": "audio_mute",
+      "timeout": 10000,
+      "updatedAt": "2025-07-31T22:20:01+08:00",
+      "userId": "local"
     },
     {
       "category": "音频控制",
@@ -137,18 +147,6 @@
         "Whitelist": true,
         "AdminOnly": false
       },
-      "timeout": 10000,
-      "updatedAt": "2025-07-31T13:17:04+08:00"
-    },
-    {
-      "category": "",
-      "command": "osascript -e \"set volume output volume 20\"",
-      "createdAt": "2025-07-31T12:48:58+08:00",
-      "description": "",
-      "icon": "",
-      "id": "audio_volume_set_1753937338376",
-      "name": "设置音量 (50)",
-      "platform": "darwin",
       "timeout": 10000,
       "updatedAt": "2025-07-31T13:17:04+08:00"
     }

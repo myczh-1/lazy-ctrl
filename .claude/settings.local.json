@@ -22,7 +22,8 @@
       "Bash(chmod:*)",
       "Bash(npm run dev:*)",
       "Bash(rm:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(~/go/bin/swag init:*)"
     ],
     "deny": []
   }

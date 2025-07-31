@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/common"
@@ -162,6 +163,15 @@ func (w *responseWriter) WriteString(s string) (int, error) {
 // ResponseFormatterMiddleware wraps gin responses with standard format
 func ResponseFormatterMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Skip formatting for Swagger/docs paths
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/swagger") || 
+		   strings.HasPrefix(path, "/docs") ||
+		   strings.Contains(path, "swagger") {
+			c.Next()
+			return
+		}
+
 		w := &responseWriter{
 			ResponseWriter: c.Writer,
 			body:           &bytes.Buffer{},

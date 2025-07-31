@@ -8,14 +8,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
+	_ "github.com/myczh-1/lazy-ctrl-agent/docs" // swagger docs
 	"github.com/myczh-1/lazy-ctrl-agent/internal/command/service"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/common"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/config"
-	"github.com/myczh-1/lazy-ctrl-ag
 	"github.com/myczh-1/lazy-ctrl-agent/internal/infrastructure/executor"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/infrastructure/security"
-	"github.com/myczh-1/lazy-ctrl-agent/internal/common"
+	"github.com/myczh-1/lazy-ctrl-agent/internal/utils"
 )
 
 // Server represents the HTTP server
@@ -50,27 +52,27 @@ func NewServer(
 func (s *Server) Start() error {
 	s.setupEngine()
 	s.setupRoutes()
+	s.setupServer()
 
-	
 	s.logger.WithFields(logrus.Fields{
 		"port": s.config.Server.HTTP.Port,
 		"host": s.config.Server.HTTP.Host,
+	}).Info("Starting HTTP server")
 
-	
 	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("HTTP server failed to start: %w", err)
+	}
 
-	
 	return nil
 }
 
 // Stop stops the HTTP server gracefully
 func (s *Server) Stop() {
+	s.logger.Info("Stopping HTTP server")
 
-	
 	ctx, cancel := context.WithTimeout(context.Background(), common.DefaultShutdownTimeout)
+	defer cancel()
 
-	
 	if err := s.server.Shutdown(ctx); err != nil {
 		s.logger.WithError(err).Error("Failed to shutdown HTTP server gracefully")
 	} else {
@@ -85,17 +87,16 @@ func (s *Server) setupEngine() {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
+	}
 
-	
+	s.engine = gin.New()
 
-	
 	// Add middleware
 	s.engine.Use(s.requestIDMiddleware())
+	s.engine.Use(utils.ResponseFormatterMiddleware())
 	s.engine.Use(s.loggingMiddleware())
 	s.engine.Use(s.corsMiddleware())
 	s.engine.Use(s.recoveryMiddleware())
-	s.engine.Use(s.securityMiddleware())
-	s.engine.Use(utils.ResponseFormatterMiddleware())
 }
 
 // setupRoutes configures the HTTP routes
@@ -103,8 +104,8 @@ func (s *Server) setupRoutes() {
 	// Create handlers
 	commandHandler := NewCommandHandler(s.commandService)
 	executeHandler := NewExecuteHandler(s.commandService, s.executorService, s.securityService)
+	systemHandler := NewSystemHandler(s.commandService, s.securityService)
 
-	
 	// API v1 routes
 	v1 := s.engine.Group("/api/v1")
 	{
@@ -112,14 +113,14 @@ func (s *Server) setupRoutes() {
 		v1.GET("/health", systemHandler.HealthCheck)
 		v1.GET("/version", systemHandler.GetVersion)
 		v1.GET("/status", systemHandler.GetStatus)
+		v1.POST("/reload", systemHandler.ReloadCommands)
 
-		
 		// Authentication routes
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/verify", systemHandler.VerifyPin)
+		}
 
-		
 		// Command routes
 		commands := v1.Group("/commands")
 		{
@@ -129,14 +130,20 @@ func (s *Server) setupRoutes() {
 			commands.GET("/:id", commandHandler.GetCommand)
 			commands.PUT("/:id", commandHandler.UpdateCommand)
 			commands.DELETE("/:id", commandHandler.DeleteCommand)
+		}
 
-		
 		// Execution routes
 		v1.GET("/execute", executeHandler.ExecuteCommand)
 		v1.POST("/execute", executeHandler.ExecuteCommandPost)
 		v1.GET("/execute/info", executeHandler.GetCommandInfo)
+	}
 
+	// Swagger documentation routes
+	s.engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	
+	// API documentation endpoints - serve raw JSON/YAML files
+	s.engine.Static("/docs", "./docs")
+
 	// Serve static files if configured
 	if s.config.Server.HTTP.StaticPath != "" && s.config.Server.HTTP.StaticDir != "" {
 		s.engine.Static(s.config.Server.HTTP.StaticPath, s.config.Server.HTTP.StaticDir)
@@ -144,15 +151,23 @@ func (s *Server) setupRoutes() {
 			"path": s.config.Server.HTTP.StaticPath,
 			"dir":  s.config.Server.HTTP.StaticDir,
 		}).Info("Serving static files")
+	}
 
-	
+	// API documentation redirect
+	s.engine.GET("/api/v1/docs", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/swagger/index.html")
+	})
+
 	// Default route for API documentation or health check
 	s.engine.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"service":   common.AppName,
-			"version":   common.AppVersion,
-			"status":    common.StatusHealthy,
-			"timestamp": utils.GetCurrentTimestamp(),
+			"service":     common.AppName,
+			"version":     common.AppVersion,
+			"status":      common.StatusHealthy,
+			"timestamp":   utils.GetCurrentTimestamp(),
+			"swagger_ui":  "/swagger/index.html",
+			"docs_json":   "/api/v1/docs/swagger.json",
+			"docs_yaml":   "/api/v1/docs/swagger.yaml",
 		})
 	})
 }
@@ -202,21 +217,21 @@ func (s *Server) loggingMiddleware() gin.HandlerFunc {
 // corsMiddleware handles CORS headers
 func (s *Server) corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
 
-		
 		// Allow all origins for development
 		// In production, this should be configured more restrictively
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Pin, X-Request-ID")
 		c.Header("Access-Control-Expose-Headers", "Content-Length, X-Request-ID")
+		c.Header("Access-Control-Allow-Credentials", "true")
 
-		
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
+		}
 
-		
 		s.logger.WithField("origin", origin).Debug("CORS request processed")
 		c.Next()
 	}
@@ -230,8 +245,8 @@ func (s *Server) recoveryMiddleware() gin.HandlerFunc {
 			"request_id": utils.GetRequestID(c),
 			"path":       c.Request.URL.Path,
 			"method":     c.Request.Method,
+		}).Error("Panic recovered in HTTP handler")
 
-		
 		utils.InternalError(c, "Internal server error occurred")
 	})
 }
@@ -243,19 +258,18 @@ func (s *Server) securityMiddleware() gin.HandlerFunc {
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("X-XSS-Protection", "1; mode=block")
+		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
 
-		
 		// Set content type for API endpoints
 		if c.Request.URL.Path != "/" && c.Request.URL.Path != "/health" {
 			c.Header(common.HeaderContentType, common.ContentTypeJSON)
+		}
 
-		
 		// Extract and store user information
 		utils.GetUserIP(c)
 		utils.GetUserAgent(c)
+		utils.SetStartTime(c, time.Now())
 
-		
 		c.Next()
 	}
-n
 }

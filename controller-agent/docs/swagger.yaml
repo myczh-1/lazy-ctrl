@@ -1,0 +1,605 @@
+basePath: /api/v1
+definitions:
+  internal_interface_http.AuthRequest:
+    properties:
+      pin:
+        type: string
+    required:
+    - pin
+    type: object
+  internal_interface_http.AuthResponse:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  internal_interface_http.CommandResponse:
+    properties:
+      available:
+        type: boolean
+      category:
+        type: string
+      command:
+        type: string
+      commandType:
+        type: string
+      createdAt:
+        type: string
+      description:
+        type: string
+      deviceId:
+        type: string
+      homepageColor:
+        type: string
+      homepagePosition:
+        $ref: '#/definitions/internal_interface_http.PositionResponse'
+      homepagePriority:
+        type: integer
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      platform:
+        type: string
+      requiresPin:
+        type: boolean
+      showOnHomepage:
+        type: boolean
+      templateId:
+        type: string
+      templateParams:
+        additionalProperties: true
+        type: object
+      timeout:
+        type: integer
+      updatedAt:
+        type: string
+      userId:
+        type: string
+      whitelisted:
+        type: boolean
+    type: object
+  internal_interface_http.CreateCommandRequest:
+    properties:
+      category:
+        type: string
+      command:
+        type: string
+      commandType:
+        type: string
+      description:
+        type: string
+      deviceId:
+        type: string
+      homeLayout:
+        $ref: '#/definitions/internal_interface_http.HomeLayoutRequest'
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      platform:
+        type: string
+      security:
+        $ref: '#/definitions/internal_interface_http.SecurityRequest'
+      templateId:
+        type: string
+      templateParams:
+        additionalProperties: true
+        type: object
+      timeout:
+        type: integer
+      userId:
+        type: string
+    required:
+    - command
+    - id
+    type: object
+  internal_interface_http.ErrorResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  internal_interface_http.ExecuteRequest:
+    properties:
+      id:
+        type: string
+      pin:
+        type: string
+    required:
+    - id
+    type: object
+  internal_interface_http.ExecuteResponse:
+    properties:
+      duration:
+        description: Duration in milliseconds
+        type: integer
+      error:
+        type: string
+      exitCode:
+        type: integer
+      output:
+        type: string
+      success:
+        type: boolean
+    type: object
+  internal_interface_http.HealthResponse:
+    properties:
+      services:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        type: string
+      system:
+        $ref: '#/definitions/internal_interface_http.SystemInfo'
+      timestamp:
+        type: string
+      version:
+        type: string
+    type: object
+  internal_interface_http.HomeLayoutRequest:
+    properties:
+      color:
+        type: string
+      defaultPosition:
+        $ref: '#/definitions/internal_interface_http.PositionRequest'
+      priority:
+        type: integer
+      showOnHome:
+        type: boolean
+    type: object
+  internal_interface_http.PositionRequest:
+    properties:
+      h:
+        type: integer
+      w:
+        type: integer
+      x:
+        type: integer
+      "y":
+        type: integer
+    type: object
+  internal_interface_http.PositionResponse:
+    properties:
+      height:
+        type: integer
+      width:
+        type: integer
+      x:
+        type: integer
+      "y":
+        type: integer
+    type: object
+  internal_interface_http.ReloadResponse:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  internal_interface_http.SecurityRequest:
+    properties:
+      adminOnly:
+        type: boolean
+      requirePin:
+        type: boolean
+      whitelist:
+        type: boolean
+    type: object
+  internal_interface_http.SystemInfo:
+    properties:
+      architecture:
+        type: string
+      goVersion:
+        type: string
+      numCPU:
+        type: integer
+      numGoroutine:
+        type: integer
+      os:
+        type: string
+    type: object
+  internal_interface_http.UpdateCommandRequest:
+    properties:
+      command:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+host: localhost:7070
+info:
+  contact:
+    email: support@lazy-ctrl.com
+    name: API Support
+    url: https://github.com/myczh-1/lazy-ctrl-agent
+  description: Remote computer control agent with HTTP/gRPC/MQTT support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Lazy-Ctrl Agent API
+  version: 2.0.0
+paths:
+  /auth/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verify PIN for authentication
+      parameters:
+      - description: Authentication request
+        in: body
+        name: auth
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interface_http.AuthRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interface_http.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+      summary: Verify PIN
+      tags:
+      - authentication
+  /commands:
+    get:
+      description: Retrieve all available commands
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_interface_http.CommandResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+      summary: Get all commands
+      tags:
+      - commands
+    post:
+      consumes:
+      - application/json
+      description: Create a new command with the provided configuration
+      parameters:
+      - description: Command configuration
+        in: body
+        name: command
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interface_http.CreateCommandRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interface_http.CommandResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+      summary: Create a new command
+      tags:
+      - commands
+  /commands/{id}:
+    delete:
+      description: Delete a command by ID
+      parameters:
+      - description: Command ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Command deleted successfully
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+      summary: Delete command
+      tags:
+      - commands
+    get:
+      description: Retrieve a specific command by its ID
+      parameters:
+      - description: Command ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interface_http.CommandResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+      summary: Get command by ID
+      tags:
+      - commands
+    put:
+      consumes:
+      - application/json
+      description: Update an existing command
+      parameters:
+      - description: Command ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Command updates
+        in: body
+        name: command
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interface_http.UpdateCommandRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interface_http.CommandResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+      summary: Update command
+      tags:
+      - commands
+  /commands/homepage:
+    get:
+      description: Retrieve commands configured for homepage display
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_interface_http.CommandResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+      summary: Get homepage commands
+      tags:
+      - commands
+  /execute:
+    get:
+      consumes:
+      - application/json
+      description: Execute a command by its ID
+      parameters:
+      - description: Command ID
+        in: query
+        name: id
+        required: true
+        type: string
+      - description: PIN for authentication (if required)
+        in: query
+        name: pin
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interface_http.ExecuteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+      summary: Execute a command
+      tags:
+      - execution
+    post:
+      consumes:
+      - application/json
+      description: Execute a command by its ID using POST method
+      parameters:
+      - description: Execute request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interface_http.ExecuteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interface_http.ExecuteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+      summary: Execute a command (POST)
+      tags:
+      - execution
+  /execute/info:
+    get:
+      description: Get information about a command without executing it
+      parameters:
+      - description: Command ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+      summary: Get command execution info
+      tags:
+      - execution
+  /health:
+    get:
+      description: Get the health status of the application
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interface_http.HealthResponse'
+      summary: Health check
+      tags:
+      - system
+  /reload:
+    post:
+      description: Reload command configuration from file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interface_http.ReloadResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_interface_http.ErrorResponse'
+      summary: Reload commands
+      tags:
+      - system
+  /status:
+    get:
+      description: Get detailed system status and metrics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get system status
+      tags:
+      - system
+  /version:
+    get:
+      description: Get the current version of the application
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get system version
+      tags:
+      - system
+securityDefinitions:
+  PinAuth:
+    description: PIN authentication for secure access
+    in: header
+    name: X-Pin
+    type: apiKey
+swagger: "2.0"
