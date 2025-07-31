@@ -513,13 +513,13 @@ export default function Commands() {
     console.log('Parsing API response:', apiResponse)
     
     // 检查响应格式：应该是 { version: string, commands: CommandInfo[] }
-    if (!apiResponse || !apiResponse.commands || !Array.isArray(apiResponse.commands)) {
+    if (!apiResponse || !apiResponse.data || !Array.isArray(apiResponse.data)) {
       console.error('Invalid API response format:', apiResponse)
       return []
     }
 
     // 直接将后端返回的命令信息转换为 DisplayCommand 格式
-    const displayCommands: DisplayCommand[] = apiResponse.commands.map((cmdInfo: any) => {
+    const displayCommands: DisplayCommand[] = apiResponse.data.map((cmdInfo: any) => {
       return {
         id: cmdInfo.id,
         name: cmdInfo.name || formatCommandName(cmdInfo.id),
