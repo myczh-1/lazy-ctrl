@@ -702,10 +702,21 @@ export default function Commands() {
   }
   
   // 处理模板配置
-  const handleTemplateConfiguration = (template: CommandTemplate, mode: 'add' | 'execute' | 'both') => {
-    setConfigureTemplate(template)
-    setConfigureMode(mode)
-    setEditingCommand(null)
+  const handleTemplateConfiguration = async (template: CommandTemplate, mode: 'add' | 'execute' | 'both') => {
+    // 检查模板是否有UI配置
+    const hasUI = template.ui && template.ui.params && template.ui.params.length > 0
+    
+    if (hasUI) {
+      // 有UI配置：显示参数表单
+      setConfigureTemplate(template)
+      setConfigureMode(mode)
+      setEditingCommand(null)
+    } else {
+      // 没有UI配置：直接添加命令
+      if (mode === 'add' || mode === 'both') {
+        await addCommand(template)
+      }
+    }
   }
   
   // 处理已有命令的重新配置
