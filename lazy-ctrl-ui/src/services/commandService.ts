@@ -1,6 +1,7 @@
 import commandAPI, { type CommandInfo } from '@/api/commandAPI'
 import { useCommandStore } from '@/stores/commandStore'
 import { commandTemplates } from '@/data/commandTemplates'
+import { getExecutionErrorMessage } from '@/utils/errorHandler'
 
 export class CommandService {
   /**
@@ -78,7 +79,7 @@ export class CommandService {
         status: result.success ? 'success' : 'error',
         commandId,
         result,
-        error: result.error
+        error: result.success ? undefined : getExecutionErrorMessage(result)
       })
       
       console.log(`Command execution ${result.success ? 'succeeded' : 'failed'}:`, result)

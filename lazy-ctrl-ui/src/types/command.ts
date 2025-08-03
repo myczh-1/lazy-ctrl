@@ -28,6 +28,7 @@ export interface DisplayCommand {
   category: string
   platforms: Record<string, string | CommandStep[]>  // 平台 -> 命令映射
   commands: Command[]  // 原始命令列表
+  templateId?: string  // 模板ID（如果来自模板）
 }
 
 export interface CommandCategory {

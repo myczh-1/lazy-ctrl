@@ -43,9 +43,20 @@ type CreateCommandRequest struct {
 
 // UpdateCommandRequest represents the request payload for updating a command
 type UpdateCommandRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Command     string `json:"command"`
+	Name           string                 `json:"name"`
+	Description    string                 `json:"description"`
+	Command        string                 `json:"command"`
+	Category       string                 `json:"category"`
+	Icon           string                 `json:"icon"`
+	Platform       string                 `json:"platform"`
+	CommandType    string                 `json:"commandType"`
+	Timeout        int                    `json:"timeout"`
+	UserID         string                 `json:"userId"`
+	DeviceID       string                 `json:"deviceId"`
+	TemplateId     string                 `json:"templateId"`
+	TemplateParams map[string]interface{} `json:"templateParams"`
+	Security       *SecurityRequest       `json:"security"`
+	HomeLayout     *HomeLayoutRequest     `json:"homeLayout"`
 }
 
 // SecurityRequest represents security configuration in request
@@ -253,7 +264,78 @@ func (h *CommandHandler) UpdateCommand(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	
-	cmd, err := h.commandService.UpdateCommand(ctx, id, req.Name, req.Description, req.Command)
+	// Create updates map from request
+	updates := make(map[string]interface{})
+	if req.Name != "" {
+		updates["name"] = req.Name
+	}
+	if req.Description != "" {
+		updates["description"] = req.Description
+	}
+	if req.Command != "" {
+		updates["command"] = req.Command
+	}
+	if req.Category != "" {
+		updates["category"] = req.Category
+	}
+	if req.Icon != "" {
+		updates["icon"] = req.Icon
+	}
+	if req.Platform != "" {
+		updates["platform"] = req.Platform
+	}
+	if req.CommandType != "" {
+		updates["commandType"] = req.CommandType
+	}
+	if req.Timeout > 0 {
+		updates["timeout"] = req.Timeout
+	}
+	if req.UserID != "" {
+		updates["userId"] = req.UserID
+	}
+	if req.DeviceID != "" {
+		updates["deviceId"] = req.DeviceID
+	}
+	if req.TemplateId != "" {
+		updates["templateId"] = req.TemplateId
+	}
+	if req.TemplateParams != nil {
+		updates["templateParams"] = req.TemplateParams
+	}
+	if req.Security != nil {
+		updates["security"] = map[string]interface{}{
+			"requirePin": req.Security.RequirePin,
+			"whitelist":  req.Security.Whitelist,
+			"adminOnly":  req.Security.AdminOnly,
+		}
+	}
+	if req.HomeLayout != nil {
+		homeLayoutMap := map[string]interface{}{
+			"showOnHome": req.HomeLayout.ShowOnHome,
+			"color":      req.HomeLayout.Color,
+			"priority":   req.HomeLayout.Priority,
+		}
+		if req.HomeLayout.DefaultPosition != nil {
+			homeLayoutMap["defaultPosition"] = map[string]interface{}{
+				"x": req.HomeLayout.DefaultPosition.X,
+				"y": req.HomeLayout.DefaultPosition.Y,
+				"w": req.HomeLayout.DefaultPosition.Width,
+				"h": req.HomeLayout.DefaultPosition.Height,
+			}
+		}
+		updates["homeLayout"] = homeLayoutMap
+	}
+	
+	var cmd *entity.Command
+	var err error
+	
+	// Use appropriate service method based on whether we have extended fields
+	if len(updates) > 3 || req.Security != nil || req.HomeLayout != nil {
+		cmd, err = h.commandService.UpdateCommandWithFields(ctx, id, updates)
+	} else {
+		cmd, err = h.commandService.UpdateCommand(ctx, id, req.Name, req.Description, req.Command)
+	}
+	
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "failed to get command: command not found: "+id {

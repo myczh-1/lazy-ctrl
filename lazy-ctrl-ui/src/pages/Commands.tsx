@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Command, DisplayCommand } from '@/types/command'
-import { commandTemplates, categoryInfo, templateToCommands } from '@/data/commandTemplates'
+import { commandTemplates, categoryInfo } from '@/data/commandTemplates'
 import type { CommandTemplate } from '@/data/commandTemplates'
 import { LayoutService } from '@/services/layoutService'
+import platformService from '@/services/platformService'
 import ParameterForm from '@/components/ParameterForm'
 import commandAPI, { type CreateCommandRequest } from '@/api/commandAPI'
+import { getExecutionErrorMessage } from '@/utils/errorHandler'
 
 // 图标组件
 const CommandIcon = ({ icon, category }: { icon?: string; category?: string }) => {
@@ -62,12 +64,86 @@ const ConfiguredCommandCard = ({ command, onExecute, onAddToLayout, onDelete, on
     return 'N/A'
   }
 
-  const getCurrentPlatform = () => {
-    const platform = navigator.platform.toLowerCase()
-    if (platform.includes('win')) return 'windows'
-    if (platform.includes('mac')) return 'darwin'
-    return 'linux'
+  const [currentPlatform, setCurrentPlatform] = useState<string>('linux')
+
+  useEffect(() => {
+    platformService.getCurrentPlatform().then(setCurrentPlatform)
+  }, [])
+
+  const isCommandAvailable = () => {
+    
+    // 检查从后端返回的available状态
+    if (command.commands && command.commands.length > 0) {
+      const cmd = command.commands[0]
+      // 如果后端明确返回了available状态
+      if (cmd.hasOwnProperty('available')) {
+        return (cmd as any).available
+      }
+    }
+    
+    // 检查平台兼容性 - 修复：使用hasOwnProperty而不是值的真假性
+    if (command.platforms) {
+      return command.platforms.hasOwnProperty(currentPlatform) || command.platforms.hasOwnProperty('all')
+    }
+    
+    if (command.commands && command.commands.length > 0) {
+      const cmd = command.commands[0]
+      return cmd.platform === 'all' || cmd.platform === currentPlatform
+    }
+    
+    return true // 默认可用
   }
+
+  // 检查命令是否为空
+  const isCommandEmpty = () => {
+    // 检查 commands 数组中的命令内容
+    if (command.commands && command.commands.length > 0) {
+      const cmd = command.commands[0]
+      return !cmd.command || (typeof cmd.command === 'string' && cmd.command.trim() === '')
+    }
+    
+    // 如果有 platforms 结构，检查当前平台的命令
+    if (command.platforms) {
+      const currentPlatformCommand = command.platforms[currentPlatform] || command.platforms['all']
+      return !currentPlatformCommand || (typeof currentPlatformCommand === 'string' && currentPlatformCommand.trim() === '')
+    }
+    
+    // 如果都没有，说明命令为空
+    return true
+  }
+
+  // 获取不可用的原因
+  const getUnavailableReason = () => {
+    if (isCommandEmpty()) {
+      return 'empty_command'
+    }
+    if (!isCommandAvailable()) {
+      return 'platform_incompatible'
+    }
+    return null
+  }
+
+  const getPlatformDisplayInfo = () => {
+    const available = isCommandAvailable() && !isCommandEmpty()
+    const unavailableReason = getUnavailableReason()
+    
+    let supportedPlatforms: string[] = []
+    
+    if (command.platforms) {
+      supportedPlatforms = Object.keys(command.platforms)
+    } else if (command.commands && command.commands.length > 0) {
+      supportedPlatforms = [command.commands[0].platform]
+    }
+    
+    return {
+      available,
+      unavailableReason,
+      supportedPlatforms: supportedPlatforms.map(p => platformService.getPlatformDisplayName(p)),
+      currentPlatform: platformService.getPlatformDisplayName(currentPlatform)
+    }
+  }
+
+  const platformInfo = getPlatformDisplayInfo()
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4 hover:shadow-lg transition-all duration-200">
@@ -80,6 +156,16 @@ const ConfiguredCommandCard = ({ command, onExecute, onAddToLayout, onDelete, on
               <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
                 {categoryInfo[command.category as keyof typeof categoryInfo]?.name || command.category || '通用'}
               </span>
+              {!platformInfo.available && (
+                <span className="text-xs px-2 py-1 bg-red-100 text-red-600 rounded-full">
+                  不兼容
+                </span>
+              )}
+              {platformInfo.available && platformInfo.supportedPlatforms.length > 0 && (
+                <span className="text-xs px-2 py-1 bg-green-100 text-green-600 rounded-full">
+                  {platformInfo.supportedPlatforms.join(', ')}
+                </span>
+              )}
               <button
                 onClick={() => setShowActions(!showActions)}
                 className="text-gray-400 hover:text-gray-600 p-1"
@@ -96,6 +182,33 @@ const ConfiguredCommandCard = ({ command, onExecute, onAddToLayout, onDelete, on
             <code className="text-xs text-gray-700 font-mono break-all">
               {getCurrentPlatformCommand()}
             </code>
+            {!platformInfo.available && (
+              <div className="mt-2 p-2 bg-red-50 rounded border border-red-200">
+                {platformInfo.unavailableReason === 'empty_command' ? (
+                  <>
+                    <p className="text-xs text-red-600">
+                      ⚠️ 命令内容为空，需要配置
+                    </p>
+                    <p className="text-xs text-red-500 mt-1">
+                      请编辑此命令添加具体的命令内容
+                    </p>
+                  </>
+                ) : platformInfo.unavailableReason === 'platform_incompatible' ? (
+                  <>
+                    <p className="text-xs text-red-600">
+                      ⚠️ 此命令在当前平台 ({platformInfo.currentPlatform}) 不可用
+                    </p>
+                    <p className="text-xs text-red-500 mt-1">
+                      支持平台: {platformInfo.supportedPlatforms.join(', ')}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-red-600">
+                    ⚠️ 此命令当前不可用
+                  </p>
+                )}
+              </div>
+            )}
             {command.platforms && Object.keys(command.platforms).length > 1 && (
               <p className="text-xs text-gray-500 mt-1">
                 支持平台: {Object.keys(command.platforms).join(', ')}
@@ -110,26 +223,16 @@ const ConfiguredCommandCard = ({ command, onExecute, onAddToLayout, onDelete, on
 
           {showActions ? (
             <div className="space-y-2">
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={handleExecute}
-                  disabled={isExecuting}
-                  className={`px-3 py-2 rounded-lg font-medium text-sm transition-all ${isExecuting
-                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-500 hover:bg-blue-600 text-white shadow-sm'
-                    }`}
+              <div className="grid grid-cols-2 gap-2">
+               <button
+                  onClick={() => setShowActions(false)}
+                  className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium text-sm transition-all shadow-sm"
                 >
-                  {isExecuting ? '执行中' : '执行'}
-                </button>
-                <button
-                  onClick={() => onAddToLayout(command)}
-                  className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium text-sm transition-all shadow-sm"
-                >
-                  添加到主页
+                  完成
                 </button>
                 <button
                   onClick={() => onDelete(command.id)}
-                  className="px-3 py-2 bg-red-500 hover:bg-red-500 text-white rounded-lg font-medium text-sm transition-all shadow-sm"
+                  className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium text-sm transition-all shadow-sm"
                 >
                   删除
                 </button>
@@ -157,13 +260,14 @@ const ConfiguredCommandCard = ({ command, onExecute, onAddToLayout, onDelete, on
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={handleExecute}
-                disabled={isExecuting}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${isExecuting
+                disabled={isExecuting || !platformInfo.available}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                  isExecuting || !platformInfo.available
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                     : 'bg-blue-500 hover:bg-blue-600 text-white shadow-sm'
                   }`}
               >
-                {isExecuting ? '执行中...' : '执行命令'}
+                {isExecuting ? '执行中...' : !platformInfo.available ? '不可用' : '执行命令'}
               </button>
               <button
                 onClick={() => onAddToLayout(command)}
@@ -248,22 +352,74 @@ const DirectEditModal = ({ isOpen, onClose, command, onSave }: {
     description: '',
     category: 'custom',
     icon: '',
-    command: ''
+    command: '',
+    platform: 'all'
   })
+  const [currentPlatform, setCurrentPlatform] = useState<string>('linux')
+
+  // 获取当前平台信息
+  useEffect(() => {
+    platformService.getCurrentPlatform().then(setCurrentPlatform)
+  }, [])
+
+  // 判断是否为模板命令
+  const isTemplateCommand = command?.templateId && command.templateId !== 'custom_command_builder'
+  const template = commandTemplates.find(t => t.templateId === command?.templateId)
+
+  // 从模板获取指定平台的命令
+  const getTemplateCommand = (template: CommandTemplate | undefined, platform: string): string => {
+    if (!template) return ''
+    
+    // 优先使用指定平台的命令，其次使用通用命令
+    const platformCommand = template.platforms[platform as keyof typeof template.platforms] || 
+                           template.platforms.all
+    
+    if (typeof platformCommand === 'string') {
+      return platformCommand
+    } else if (Array.isArray(platformCommand)) {
+      return `多步骤命令 (${platformCommand.length} 步骤)`
+    }
+    
+    return ''
+  }
 
   useEffect(() => {
     if (command) {
+      const currentPlatform = command.commands?.[0]?.platform || 'all'
+      const currentTemplate = commandTemplates.find(t => t.templateId === command.templateId)
+      
+      // 对于模板命令，从模板获取命令内容；对于自定义命令，使用保存的命令内容
+      const commandContent = isTemplateCommand 
+        ? getTemplateCommand(currentTemplate, currentPlatform)
+        : (typeof command.commands?.[0]?.command === 'string' ? command.commands[0].command : '')
+      
       setFormData({
         name: command.name || '',
         description: command.description || '',
         category: command.category || 'custom',
         icon: command.icon || '',
-        command: command.commands?.[0]?.command || ''
+        command: commandContent,
+        platform: currentPlatform
       })
     }
-  }, [command])
+  }, [command, isTemplateCommand])
 
   if (!isOpen || !command) return null
+
+  // 处理平台选择变化
+  const handlePlatformChange = (newPlatform: string) => {
+    setFormData(prev => {
+      const newCommand = isTemplateCommand 
+        ? getTemplateCommand(template, newPlatform)
+        : prev.command
+      
+      return {
+        ...prev,
+        platform: newPlatform,
+        command: newCommand
+      }
+    })
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -275,7 +431,7 @@ const DirectEditModal = ({ isOpen, onClose, command, onSave }: {
       category: formData.category,
       icon: formData.icon,
       command: formData.command,
-      platform: getCurrentPlatform(),
+      platform: formData.platform,
       timeout: 10000,
       security: {
         requirePin: false,
@@ -285,13 +441,6 @@ const DirectEditModal = ({ isOpen, onClose, command, onSave }: {
     }
 
     onSave(updatedCommand)
-  }
-
-  const getCurrentPlatform = () => {
-    const platform = navigator.platform.toLowerCase()
-    if (platform.includes('win')) return 'windows'
-    if (platform.includes('mac')) return 'darwin'
-    return 'linux'
   }
 
   return (
@@ -358,15 +507,45 @@ const DirectEditModal = ({ isOpen, onClose, command, onSave }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">命令内容</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">支持平台</label>
+            <select
+              value={formData.platform}
+              onChange={(e) => handlePlatformChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">全平台</option>
+              <option value="windows">Windows</option>
+              <option value="darwin">macOS</option>
+              <option value="linux">Linux</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              选择此命令支持的操作系统平台
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              命令内容
+              {isTemplateCommand && (
+                <span className="text-xs text-blue-600 ml-2">(模板命令，根据平台自动填充)</span>
+              )}
+            </label>
             <textarea
               value={formData.command}
-              onChange={(e) => setFormData({ ...formData, command: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+              onChange={isTemplateCommand ? undefined : (e) => setFormData({ ...formData, command: e.target.value })}
+              readOnly={isTemplateCommand}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm ${
+                isTemplateCommand ? 'bg-gray-50 cursor-not-allowed' : ''
+              }`}
               rows={4}
-              required
-              placeholder="输入要执行的命令..."
+              required={!isTemplateCommand}
+              placeholder={isTemplateCommand ? "模板命令将根据选择的平台自动填充" : "输入要执行的命令..."}
             />
+            {isTemplateCommand && (
+              <p className="text-xs text-gray-500 mt-1">
+                此命令来自模板 "{template?.name}"，请选择平台查看对应命令
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
@@ -460,7 +639,13 @@ export default function Commands() {
   const [configureMode, setConfigureMode] = useState<'add' | 'execute' | 'both'>('both')
   const [editingCommand, setEditingCommand] = useState<DisplayCommand | null>(null)
   const [showDirectEdit, setShowDirectEdit] = useState(false)
+  const [currentPlatform, setCurrentPlatform] = useState<string>('linux')
   const fetchingRef = useRef(false)
+
+  // 获取当前平台信息
+  useEffect(() => {
+    platformService.getCurrentPlatform().then(setCurrentPlatform)
+  }, [])
 
   // 获取命令列表
   const fetchCommands = async () => {
@@ -524,14 +709,15 @@ export default function Commands() {
         description: cmdInfo.description || '',
         icon: cmdInfo.icon || getCategoryIcon(cmdInfo.category || 'custom'),
         category: cmdInfo.category || 'custom',
+        templateId: cmdInfo.templateId, // 传递模板ID
         platforms: {
-          // 由于后端只返回当前平台的命令，我们假设它适用于所有平台
-          'all': cmdInfo.command || ''
+          // 保留后端真实的平台信息，而不是强制设为'all'
+          [cmdInfo.platform || 'all']: cmdInfo.command || ''
         },
         commands: [{
           id: cmdInfo.id,
           name: cmdInfo.name || formatCommandName(cmdInfo.id),
-          platform: 'all',
+          platform: cmdInfo.platform || 'all',
           command: cmdInfo.command || '',
           category: cmdInfo.category || 'custom',
           icon: cmdInfo.icon || getCategoryIcon(cmdInfo.category || 'custom'),
@@ -570,6 +756,7 @@ export default function Commands() {
         description: firstCmd.description,
         icon: firstCmd.icon,
         category: firstCmd.category,
+        templateId: (firstCmd as any).templateId, // 传递模板ID
         platforms,
         commands: cmdList
       })
@@ -628,7 +815,6 @@ export default function Commands() {
       }
 
       // 获取当前平台的命令
-      const currentPlatform = getCurrentPlatform()
       const platformCommand = processedTemplate.platforms[currentPlatform] || processedTemplate.platforms.all
 
       if (!platformCommand || typeof platformCommand !== 'string') {
@@ -772,8 +958,7 @@ export default function Commands() {
       }
 
       // 获取当前平台的命令
-      const platform = getCurrentPlatform()
-      const platformCommand = processedTemplate.platforms[platform] || processedTemplate.platforms.all
+      const platformCommand = processedTemplate.platforms[currentPlatform] || processedTemplate.platforms.all
 
       if (platformCommand && typeof platformCommand === 'string') {
         try {
@@ -798,13 +983,8 @@ export default function Commands() {
     }
   }
 
-  // 获取当前平台
-  const getCurrentPlatform = () => {
-    const platform = navigator.platform.toLowerCase()
-    if (platform.includes('win')) return 'windows'
-    if (platform.includes('mac')) return 'darwin'
-    return 'linux'
-  }
+  // 获取当前平台（现在从状态获取）
+  const getCurrentPlatform = () => currentPlatform
 
   // 删除命令
   const deleteCommand = async (commandId: string) => {
@@ -830,12 +1010,12 @@ export default function Commands() {
         description: displayCommand.description || '',
         category: displayCommand.category,
         icon: displayCommand.icon,
-        command: displayCommand.commands[0]?.command || '',
-        platform: displayCommand.commands[0]?.platform || getCurrentPlatform(),
-        templateId: displayCommand.commands[0]?.templateId,
-        templateParams: displayCommand.commands[0]?.templateParams,
-        userId: displayCommand.commands[0]?.userId || 'local',
-        deviceId: displayCommand.commands[0]?.deviceId || 'default',
+        command: typeof displayCommand.commands[0]?.command === 'string' ? displayCommand.commands[0].command : '',
+        platform: displayCommand.commands[0]?.platform || currentPlatform,
+        templateId: (displayCommand.commands[0] as any)?.templateId,
+        templateParams: (displayCommand.commands[0] as any)?.templateParams,
+        userId: (displayCommand.commands[0] as any)?.userId || 'local',
+        deviceId: (displayCommand.commands[0] as any)?.deviceId || 'default',
         timeout: 10000,
         security: {
           requirePin: false,
@@ -881,7 +1061,9 @@ export default function Commands() {
       if (result.success) {
         showToast(`命令 "${command?.name || commandId}" 执行成功`, 'success')
       } else {
-        showToast(`命令执行失败: ${result.error || '未知错误'}`, 'error')
+        // 使用友好的错误提示
+        const friendlyErrorMessage = getExecutionErrorMessage(result)
+        showToast(`命令执行失败:\n${friendlyErrorMessage}`, 'error')
       }
     } catch (error) {
       console.error('Command execution failed:', error)
@@ -894,9 +1076,14 @@ export default function Commands() {
     const toast = document.createElement('div')
     toast.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'
       }`
+    // 处理多行文本
+    toast.style.whiteSpace = 'pre-line'
+    toast.style.maxWidth = '400px'
     toast.textContent = message
     document.body.appendChild(toast)
-    setTimeout(() => document.body.removeChild(toast), 3000)
+    // 错误消息显示时间稍长一些
+    const displayTime = type === 'error' ? 5000 : 3000
+    setTimeout(() => document.body.removeChild(toast), displayTime)
   }
 
   // 筛选命令

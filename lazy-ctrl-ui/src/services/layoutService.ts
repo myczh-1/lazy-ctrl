@@ -3,6 +3,7 @@ import { useLayoutStore } from '@/stores/layoutStore'
 import { useCommandStore } from '@/stores/commandStore'
 import { CommandService } from './commandService'
 import commandAPI, { type CreateCommandRequest } from '@/api/commandAPI'
+import platformService from '@/services/platformService'
 
 export class LayoutService {
   /**
@@ -131,6 +132,7 @@ export class LayoutService {
         if (!command) return
         
         // 构建更新请求
+        const currentPlatform = await this.getCurrentPlatform()
         const commandRequest: CreateCommandRequest = {
           id: command.id,
           name: command.name,
@@ -138,7 +140,7 @@ export class LayoutService {
           category: command.category,
           icon: command.icon,
           command: command.command || '',
-          platform: this.getCurrentPlatform(),
+          platform: currentPlatform,
           timeout: command.timeout || 10000,
           security: {
             requirePin: command.requiresPin || false,
@@ -173,11 +175,8 @@ export class LayoutService {
   /**
    * 获取当前平台
    */
-  private static getCurrentPlatform(): string {
-    const platform = navigator.platform.toLowerCase()
-    if (platform.includes('win')) return 'windows'
-    if (platform.includes('mac')) return 'darwin'
-    return 'linux'
+  private static async getCurrentPlatform(): Promise<string> {
+    return await platformService.getCurrentPlatform()
   }
 
   /**

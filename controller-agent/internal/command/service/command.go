@@ -99,6 +99,61 @@ func (s *CommandService) UpdateCommand(ctx context.Context, id, name, descriptio
 	return cmd, nil
 }
 
+// UpdateCommandWithFields updates a command with multiple fields
+func (s *CommandService) UpdateCommandWithFields(ctx context.Context, id string, updates map[string]interface{}) (*entity.Command, error) {
+	if id == "" {
+		return nil, fmt.Errorf("command ID is required")
+	}
+	
+	// Get existing command
+	cmd, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get command: %w", err)
+	}
+	
+	// Update command fields
+	cmd.UpdateFields(updates)
+	
+	// Handle security updates separately
+	if securityData, ok := updates["security"]; ok {
+		if securityMap, ok := securityData.(map[string]interface{}); ok {
+			requirePin, _ := securityMap["requirePin"].(bool)
+			whitelist, _ := securityMap["whitelist"].(bool)
+			adminOnly, _ := securityMap["adminOnly"].(bool)
+			cmd.SetSecurity(requirePin, whitelist, adminOnly)
+		}
+	}
+	
+	// Handle home layout updates separately
+	if homeLayoutData, ok := updates["homeLayout"]; ok {
+		if homeLayoutMap, ok := homeLayoutData.(map[string]interface{}); ok {
+			showOnHome, _ := homeLayoutMap["showOnHome"].(bool)
+			color, _ := homeLayoutMap["color"].(string)
+			priority, _ := homeLayoutMap["priority"].(int)
+			
+			var position *entity.PositionConfig
+			if posData, ok := homeLayoutMap["defaultPosition"]; ok {
+				if posMap, ok := posData.(map[string]interface{}); ok {
+					x, _ := posMap["x"].(int)
+					y, _ := posMap["y"].(int)
+					w, _ := posMap["w"].(int)
+					h, _ := posMap["h"].(int)
+					position = &entity.PositionConfig{X: x, Y: y, Width: w, Height: h}
+				}
+			}
+			
+			cmd.SetHomeLayout(showOnHome, position, color, priority)
+		}
+	}
+	
+	// Save updated command
+	if err := s.repo.Update(ctx, cmd); err != nil {
+		return nil, fmt.Errorf("failed to update command: %w", err)
+	}
+	
+	return cmd, nil
+}
+
 // DeleteCommand deletes a command by ID
 func (s *CommandService) DeleteCommand(ctx context.Context, id string) error {
 	if id == "" {

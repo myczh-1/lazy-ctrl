@@ -167,6 +167,47 @@ func (c *Command) Update(name, description, command string) {
 	c.UpdatedAt = time.Now()
 }
 
+// UpdateFields updates multiple fields of the command using a map
+func (c *Command) UpdateFields(updates map[string]interface{}) {
+	if name, ok := updates["name"].(string); ok && name != "" {
+		c.Name = name
+	}
+	if description, ok := updates["description"].(string); ok && description != "" {
+		c.Description = description
+	}
+	if command, ok := updates["command"].(string); ok && command != "" {
+		c.Command = command
+	}
+	if category, ok := updates["category"].(string); ok && category != "" {
+		c.Category = category
+	}
+	if icon, ok := updates["icon"].(string); ok && icon != "" {
+		c.Icon = icon
+	}
+	if platform, ok := updates["platform"].(string); ok && platform != "" {
+		c.Platform = platform
+	}
+	if commandType, ok := updates["commandType"].(string); ok && commandType != "" {
+		c.CommandType = commandType
+	}
+	if timeout, ok := updates["timeout"].(int); ok && timeout > 0 {
+		c.Timeout = timeout
+	}
+	if userID, ok := updates["userId"].(string); ok && userID != "" {
+		c.UserID = userID
+	}
+	if deviceID, ok := updates["deviceId"].(string); ok && deviceID != "" {
+		c.DeviceID = deviceID
+	}
+	if templateId, ok := updates["templateId"].(string); ok && templateId != "" {
+		c.TemplateId = templateId
+	}
+	if templateParams, ok := updates["templateParams"].(map[string]interface{}); ok {
+		c.TemplateParams = templateParams
+	}
+	c.UpdatedAt = time.Now()
+}
+
 // SetSecurity sets security configuration for the command
 func (c *Command) SetSecurity(requirePin, whitelist, adminOnly bool) {
 	c.Security = &SecurityConfig{

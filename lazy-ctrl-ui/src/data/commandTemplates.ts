@@ -362,18 +362,7 @@ export const commandTemplates: CommandTemplate[] = [
     isTemplate: true
   },
   
-  // 自定义命令模板
-  {
-    templateId: 'custom_command',
-    name: '自定义命令',
-    description: '创建自定义系统命令',
-    category: 'custom',
-    icon: '⚙️',
-    platforms: {
-      all: 'echo "自定义命令"'
-    },
-    isTemplate: true
-  },
+
   // 新增：自定义命令构建器
   {
     templateId: 'custom_command_builder',
@@ -403,22 +392,6 @@ export const commandTemplates: CommandTemplate[] = [
     isTemplate: true
   },
   
-  // 多步骤命令示例
-  {
-    templateId: 'multi_step_example',
-    name: '多步骤命令示例',
-    description: '执行多个步骤的复杂命令',
-    category: 'custom',
-    icon: '🔄',
-    platforms: {
-      all: [
-        { type: 'shell', cmd: 'echo "开始执行..."' },
-        { type: 'delay', duration: 1000 },
-        { type: 'shell', cmd: 'echo "执行完成!"' }
-      ]
-    },
-    isTemplate: true
-  },
   // 新增：自定义多步骤命令
   {
     templateId: 'multi_step_custom',

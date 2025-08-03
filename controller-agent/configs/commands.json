@@ -1,41 +1,65 @@
 {
   "commands": [
     {
-      "category": "",
-      "command": "osascript -e \"set volume output volume 20\"",
-      "createdAt": "2025-07-31T12:48:58+08:00",
-      "description": "",
-      "icon": "",
-      "id": "audio_volume_set_1753937338376",
-      "name": "设置音量 (50)",
-      "platform": "darwin",
-      "timeout": 10000,
-      "updatedAt": "2025-07-31T13:17:04+08:00"
-    },
-    {
       "category": "audio",
       "command": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]173)\"",
       "createdAt": "2025-07-31T22:20:01+08:00",
       "description": "切换系统音频静音状态",
       "deviceId": "default",
       "homeLayout": {
-        "ShowOnHome": false,
-        "DefaultPosition": null,
+        "ShowOnHome": true,
+        "DefaultPosition": {
+          "X": 1,
+          "Y": 0,
+          "Width": 1,
+          "Height": 1
+        },
         "Color": "",
         "Priority": 0
       },
       "icon": "🔇",
       "id": "audio_mute_1753971601667",
       "name": "静音",
-      "platform": "windows",
+      "platform": "linux",
+      "security": {
+        "RequirePin": false,
+        "Whitelist": false,
+        "AdminOnly": false
+      },
+      "templateId": "audio_mute",
+      "timeout": 10000,
+      "updatedAt": "2025-08-03T14:51:56+08:00",
+      "userId": "local"
+    },
+    {
+      "category": "audio",
+      "command": "amixer set Master 5%+",
+      "createdAt": "2025-08-03T14:41:06+08:00",
+      "description": "增加系统音量",
+      "deviceId": "default",
+      "homeLayout": {
+        "ShowOnHome": true,
+        "DefaultPosition": {
+          "X": 3,
+          "Y": 0,
+          "Width": 1,
+          "Height": 1
+        },
+        "Color": "",
+        "Priority": 0
+      },
+      "icon": "🔊",
+      "id": "audio_volume_up_1754203266740",
+      "name": "音量+",
+      "platform": "linux",
       "security": {
         "RequirePin": false,
         "Whitelist": true,
         "AdminOnly": false
       },
-      "templateId": "audio_mute",
+      "templateId": "audio_volume_up",
       "timeout": 10000,
-      "updatedAt": "2025-07-31T22:20:01+08:00",
+      "updatedAt": "2025-08-03T14:51:56+08:00",
       "userId": "local"
     },
     {
@@ -46,10 +70,10 @@
       "homeLayout": {
         "ShowOnHome": true,
         "DefaultPosition": {
-          "X": 2,
+          "X": 0,
           "Y": 0,
-          "Width": 0,
-          "Height": 0
+          "Width": 1,
+          "Height": 1
         },
         "Color": "",
         "Priority": 0
@@ -57,14 +81,14 @@
       "icon": "volume-up",
       "id": "unmute_cmd_002",
       "name": "取消静音",
-      "platform": "windows",
+      "platform": "linux",
       "security": {
         "RequirePin": false,
         "Whitelist": false,
         "AdminOnly": false
       },
       "timeout": 3000,
-      "updatedAt": "2025-07-17T22:39:59+08:00"
+      "updatedAt": "2025-08-03T14:51:56+08:00"
     },
     {
       "category": "系统控制",
@@ -75,9 +99,9 @@
         "ShowOnHome": true,
         "DefaultPosition": {
           "X": 2,
-          "Y": 1,
-          "Width": 0,
-          "Height": 0
+          "Y": 0,
+          "Width": 1,
+          "Height": 1
         },
         "Color": "",
         "Priority": 0
@@ -85,42 +109,14 @@
       "icon": "lock",
       "id": "lock_cmd_003",
       "name": "锁屏",
-      "platform": "windows",
+      "platform": "linux",
       "security": {
         "RequirePin": false,
         "Whitelist": false,
         "AdminOnly": false
       },
       "timeout": 5000,
-      "updatedAt": "2025-07-17T22:39:59+08:00"
-    },
-    {
-      "category": "音频控制",
-      "command": "osascript -e 'set volume output volume (output volume of (get volume settings) + 10)'",
-      "createdAt": "2024-06-30T00:00:00Z",
-      "description": "增加系统音量",
-      "homeLayout": {
-        "ShowOnHome": true,
-        "DefaultPosition": {
-          "X": 3,
-          "Y": 0,
-          "Width": 0,
-          "Height": 0
-        },
-        "Color": "",
-        "Priority": 0
-      },
-      "icon": "volume-plus",
-      "id": "volume_up_cmd_004",
-      "name": "音量+",
-      "platform": "darwin",
-      "security": {
-        "RequirePin": false,
-        "Whitelist": true,
-        "AdminOnly": false
-      },
-      "timeout": 2000,
-      "updatedAt": "2025-07-31T13:17:04+08:00"
+      "updatedAt": "2025-08-03T14:51:56+08:00"
     },
     {
       "category": "开发工具",
@@ -148,6 +144,72 @@
         "AdminOnly": false
       },
       "timeout": 10000,
+      "updatedAt": "2025-07-31T13:17:04+08:00"
+    },
+    {
+      "category": "",
+      "command": "osascript -e \"set volume output volume 10\"",
+      "createdAt": "2025-07-31T12:48:58+08:00",
+      "description": "",
+      "icon": "",
+      "id": "audio_volume_set_1753937338376",
+      "name": "设置音量 (50)",
+      "platform": "darwin",
+      "timeout": 10000,
+      "updatedAt": "2025-08-02T22:49:38+08:00"
+    },
+    {
+      "category": "custom",
+      "command": "echo \"自定义命令\"",
+      "createdAt": "2025-08-03T08:08:34+08:00",
+      "description": "创建自定义系统命令",
+      "deviceId": "default",
+      "homeLayout": {
+        "ShowOnHome": false,
+        "DefaultPosition": null,
+        "Color": "",
+        "Priority": 0
+      },
+      "icon": "⚙️",
+      "id": "custom_command_1754179714003",
+      "name": "自定义命令",
+      "platform": "windows",
+      "security": {
+        "RequirePin": false,
+        "Whitelist": true,
+        "AdminOnly": false
+      },
+      "templateId": "custom_command",
+      "timeout": 10000,
+      "updatedAt": "2025-08-03T08:08:34+08:00",
+      "userId": "local"
+    },
+    {
+      "category": "音频控制",
+      "command": "osascript -e 'set volume output volume (output volume of (get volume settings) + 10)'",
+      "createdAt": "2024-06-30T00:00:00Z",
+      "description": "增加系统音量",
+      "homeLayout": {
+        "ShowOnHome": true,
+        "DefaultPosition": {
+          "X": 3,
+          "Y": 0,
+          "Width": 0,
+          "Height": 0
+        },
+        "Color": "",
+        "Priority": 0
+      },
+      "icon": "volume-plus",
+      "id": "volume_up_cmd_004",
+      "name": "音量+",
+      "platform": "darwin",
+      "security": {
+        "RequirePin": false,
+        "Whitelist": true,
+        "AdminOnly": false
+      },
+      "timeout": 2000,
       "updatedAt": "2025-07-31T13:17:04+08:00"
     }
   ],

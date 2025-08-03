@@ -71,6 +71,20 @@ export interface ExecutionResult {
   execution_time: number
 }
 
+export interface HealthResponse {
+  status: string
+  timestamp: string
+  version: string
+  system: {
+    os: string
+    architecture: string
+    goVersion: string
+    numCPU: number
+    numGoroutine: number
+  }
+  services: Record<string, string>
+}
+
 // 开发环境使用代理，生产环境使用完整URL
 const API_BASE_URL = import.meta.env.DEV ? '' : 'http://localhost:7070'
 
@@ -165,8 +179,16 @@ export class CommandAPI {
   /**
    * 健康检查
    */
-  async health(): Promise<{ status: string; timestamp: number }> {
-    return this.request<{ status: string; timestamp: number }>('/api/v1/health')
+  async health(): Promise<HealthResponse> {
+    return this.request<HealthResponse>('/api/v1/health')
+  }
+
+  /**
+   * 获取服务器平台信息
+   */
+  async getPlatform(): Promise<string> {
+    const health = await this.health()
+    return health.system.os
   }
 
   /**
@@ -206,13 +228,18 @@ export default commandAPIInstance
 
 // 全局错误处理器
 export class APIError extends Error {
+  public status?: number
+  public response?: any
+  
   constructor(
     message: string,
-    public status?: number,
-    public response?: any
+    status?: number,
+    response?: any
   ) {
     super(message)
     this.name = 'APIError'
+    this.status = status
+    this.response = response
   }
 }
 

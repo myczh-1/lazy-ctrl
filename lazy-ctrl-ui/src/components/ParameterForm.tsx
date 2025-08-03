@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import type { UIParam } from '@/types/command'
 import type { CommandTemplate } from '@/data/commandTemplates'
+import platformService from '@/services/platformService'
 
 interface ParameterFormProps {
   template: CommandTemplate
@@ -151,10 +152,7 @@ const CommandPreview = ({ template, params }: {
   const [currentPlatform, setCurrentPlatform] = useState<string>('all')
 
   useEffect(() => {
-    const platform = navigator.platform.toLowerCase()
-    if (platform.includes('win')) setCurrentPlatform('windows')
-    else if (platform.includes('mac')) setCurrentPlatform('darwin')
-    else setCurrentPlatform('linux')
+    platformService.getCurrentPlatform().then(setCurrentPlatform)
   }, [])
 
   const replaceParams = (command: string | any[], params: Record<string, any>): string => {
