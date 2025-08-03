@@ -2,37 +2,6 @@
   "commands": [
     {
       "category": "audio",
-      "command": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]173)\"",
-      "createdAt": "2025-07-31T22:20:01+08:00",
-      "description": "切换系统音频静音状态",
-      "deviceId": "default",
-      "homeLayout": {
-        "ShowOnHome": true,
-        "DefaultPosition": {
-          "X": 1,
-          "Y": 0,
-          "Width": 1,
-          "Height": 1
-        },
-        "Color": "",
-        "Priority": 0
-      },
-      "icon": "🔇",
-      "id": "audio_mute_1753971601667",
-      "name": "静音",
-      "platform": "linux",
-      "security": {
-        "RequirePin": false,
-        "Whitelist": false,
-        "AdminOnly": false
-      },
-      "templateId": "audio_mute",
-      "timeout": 10000,
-      "updatedAt": "2025-08-03T14:51:56+08:00",
-      "userId": "local"
-    },
-    {
-      "category": "audio",
       "command": "amixer set Master 5%+",
       "createdAt": "2025-08-03T14:41:06+08:00",
       "description": "增加系统音量",
@@ -59,7 +28,7 @@
       },
       "templateId": "audio_volume_up",
       "timeout": 10000,
-      "updatedAt": "2025-08-03T14:51:56+08:00",
+      "updatedAt": "2025-08-03T15:12:21+08:00",
       "userId": "local"
     },
     {
@@ -84,11 +53,39 @@
       "platform": "linux",
       "security": {
         "RequirePin": false,
-        "Whitelist": false,
+        "Whitelist": true,
         "AdminOnly": false
       },
       "timeout": 3000,
-      "updatedAt": "2025-08-03T14:51:56+08:00"
+      "updatedAt": "2025-08-03T15:12:21+08:00"
+    },
+    {
+      "category": "音频控制",
+      "command": "osascript -e 'set volume output volume (output volume of (get volume settings) + 10)'",
+      "createdAt": "2024-06-30T00:00:00Z",
+      "description": "增加系统音量",
+      "homeLayout": {
+        "ShowOnHome": true,
+        "DefaultPosition": {
+          "X": 3,
+          "Y": 0,
+          "Width": 0,
+          "Height": 0
+        },
+        "Color": "",
+        "Priority": 0
+      },
+      "icon": "volume-plus",
+      "id": "volume_up_cmd_004",
+      "name": "音量+",
+      "platform": "darwin",
+      "security": {
+        "RequirePin": false,
+        "Whitelist": true,
+        "AdminOnly": false
+      },
+      "timeout": 2000,
+      "updatedAt": "2025-07-31T13:17:04+08:00"
     },
     {
       "category": "系统控制",
@@ -112,11 +109,11 @@
       "platform": "linux",
       "security": {
         "RequirePin": false,
-        "Whitelist": false,
+        "Whitelist": true,
         "AdminOnly": false
       },
       "timeout": 5000,
-      "updatedAt": "2025-08-03T14:51:56+08:00"
+      "updatedAt": "2025-08-03T15:12:21+08:00"
     },
     {
       "category": "开发工具",
@@ -185,32 +182,35 @@
       "userId": "local"
     },
     {
-      "category": "音频控制",
-      "command": "osascript -e 'set volume output volume (output volume of (get volume settings) + 10)'",
-      "createdAt": "2024-06-30T00:00:00Z",
-      "description": "增加系统音量",
+      "category": "audio",
+      "command": "powershell -c \"(New-Object -comObject WScript.Shell).SendKeys([char]173)\"",
+      "createdAt": "2025-07-31T22:20:01+08:00",
+      "description": "切换系统音频静音状态",
+      "deviceId": "default",
       "homeLayout": {
         "ShowOnHome": true,
         "DefaultPosition": {
-          "X": 3,
+          "X": 1,
           "Y": 0,
-          "Width": 0,
-          "Height": 0
+          "Width": 1,
+          "Height": 1
         },
         "Color": "",
         "Priority": 0
       },
-      "icon": "volume-plus",
-      "id": "volume_up_cmd_004",
-      "name": "音量+",
-      "platform": "darwin",
+      "icon": "🔇",
+      "id": "audio_mute_1753971601667",
+      "name": "静音",
+      "platform": "linux",
       "security": {
         "RequirePin": false,
         "Whitelist": true,
         "AdminOnly": false
       },
-      "timeout": 2000,
-      "updatedAt": "2025-07-31T13:17:04+08:00"
+      "templateId": "audio_mute",
+      "timeout": 10000,
+      "updatedAt": "2025-08-03T15:12:21+08:00",
+      "userId": "local"
     }
   ],
   "version": "3.0"

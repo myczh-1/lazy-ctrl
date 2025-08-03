@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/myczh-1/lazy-ctrl-agent/internal/command/entity"
@@ -17,6 +18,7 @@ type FileCommandRepository struct {
 	configPath string
 	commands   map[string]*entity.Command
 	version    string
+	mu         sync.RWMutex // 保护并发访问
 }
 
 // CommandConfig represents the JSON structure of command configuration file
@@ -36,6 +38,9 @@ func NewFileCommandRepository(configPath string) repository.CommandRepository {
 
 // Create creates a new command
 func (r *FileCommandRepository) Create(ctx context.Context, command *entity.Command) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	
 	// Check if command already exists
 	if _, exists := r.commands[command.ID]; exists {
 		return fmt.Errorf("command with ID %s already exists", command.ID)
@@ -50,6 +55,9 @@ func (r *FileCommandRepository) Create(ctx context.Context, command *entity.Comm
 
 // GetByID retrieves a command by its ID
 func (r *FileCommandRepository) GetByID(ctx context.Context, id string) (*entity.Command, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
 	command, exists := r.commands[id]
 	if !exists {
 		return nil, fmt.Errorf("command not found: %s", id)
@@ -61,6 +69,9 @@ func (r *FileCommandRepository) GetByID(ctx context.Context, id string) (*entity
 
 // GetAll retrieves all commands
 func (r *FileCommandRepository) GetAll(ctx context.Context) ([]*entity.Command, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
 	commands := make([]*entity.Command, 0, len(r.commands))
 	for _, cmd := range r.commands {
 		commands = append(commands, r.copyCommand(cmd))
@@ -70,6 +81,9 @@ func (r *FileCommandRepository) GetAll(ctx context.Context) ([]*entity.Command, 
 
 // Update updates an existing command
 func (r *FileCommandRepository) Update(ctx context.Context, command *entity.Command) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	
 	// Check if command exists
 	if _, exists := r.commands[command.ID]; !exists {
 		return fmt.Errorf("command not found: %s", command.ID)
@@ -84,6 +98,9 @@ func (r *FileCommandRepository) Update(ctx context.Context, command *entity.Comm
 
 // Delete deletes a command by ID
 func (r *FileCommandRepository) Delete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	
 	// Check if command exists
 	if _, exists := r.commands[id]; !exists {
 		return fmt.Errorf("command not found: %s", id)
@@ -98,6 +115,9 @@ func (r *FileCommandRepository) Delete(ctx context.Context, id string) error {
 
 // GetByUserID retrieves commands for a specific user
 func (r *FileCommandRepository) GetByUserID(ctx context.Context, userID string) ([]*entity.Command, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
 	var commands []*entity.Command
 	for _, cmd := range r.commands {
 		if cmd.UserID == userID {
@@ -109,6 +129,9 @@ func (r *FileCommandRepository) GetByUserID(ctx context.Context, userID string) 
 
 // GetByCategory retrieves commands by category
 func (r *FileCommandRepository) GetByCategory(ctx context.Context, category string) ([]*entity.Command, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
 	var commands []*entity.Command
 	for _, cmd := range r.commands {
 		if cmd.Category == category {
@@ -120,6 +143,9 @@ func (r *FileCommandRepository) GetByCategory(ctx context.Context, category stri
 
 // GetHomepageCommands retrieves commands that should be displayed on homepage
 func (r *FileCommandRepository) GetHomepageCommands(ctx context.Context) ([]*entity.Command, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
 	var commands []*entity.Command
 	for _, cmd := range r.commands {
 		if cmd.ShowOnHomepage() {
@@ -131,6 +157,9 @@ func (r *FileCommandRepository) GetHomepageCommands(ctx context.Context) ([]*ent
 
 // Exists checks if a command with the given ID exists
 func (r *FileCommandRepository) Exists(ctx context.Context, id string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	
 	_, exists := r.commands[id]
 	return exists, nil
 }
@@ -192,6 +221,7 @@ func (r *FileCommandRepository) loadFromFile() error {
 	}
 	
 	// Convert to entity commands
+	r.mu.Lock()
 	r.commands = make(map[string]*entity.Command)
 	r.version = config.Version
 	
@@ -237,6 +267,7 @@ func (r *FileCommandRepository) loadFromFile() error {
 		
 		r.commands[cmd.ID] = cmd
 	}
+	r.mu.Unlock()
 	
 	return nil
 }
