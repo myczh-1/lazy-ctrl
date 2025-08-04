@@ -1,0 +1,33 @@
+server:
+  port: 8080
+  read_timeout: 30
+  write_timeout: 30
+  idle_timeout: 120
+
+grpc:
+  port: 8081
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: your_password
+  dbname: lazy_ctrl_cloud
+  sslmode: disable
+  timezone: Asia/Shanghai
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret_key: your-secret-key-change-in-production
+  access_token_duration: 15   # minutes
+  refresh_token_duration: 7   # days
+
+log:
+  level: info
+  format: json
+  output: stdout

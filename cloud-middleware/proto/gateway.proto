@@ -1,0 +1,320 @@
+syntax = "proto3";
+
+package gateway;
+
+option go_package = "github.com/myczh-1/lazy-ctrl-cloud/proto";
+
+import "google/protobuf/timestamp.proto";
+
+// 云端网关服务定义
+service GatewayService {
+  // 设备管理
+  rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
+  rpc GetDeviceStatus(GetDeviceStatusRequest) returns (GetDeviceStatusResponse);
+  rpc ListUserDevices(ListUserDevicesRequest) returns (ListUserDevicesResponse);
+  
+  // 命令管理 - 映射本地 HTTP API
+  rpc CreateCommand(CreateCommandRequest) returns (CreateCommandResponse);
+  rpc UpdateCommand(UpdateCommandRequest) returns (UpdateCommandResponse);
+  rpc DeleteCommand(DeleteCommandRequest) returns (DeleteCommandResponse);
+  rpc GetCommand(GetCommandRequest) returns (GetCommandResponse);
+  rpc GetAllCommands(GetAllCommandsRequest) returns (GetAllCommandsResponse);
+  rpc GetHomepageCommands(GetHomepageCommandsRequest) returns (GetHomepageCommandsResponse);
+  
+  // 命令执行 - 映射本地执行API
+  rpc ExecuteCommand(ExecuteCommandRequest) returns (ExecuteCommandResponse);
+  rpc GetCommandInfo(GetCommandInfoRequest) returns (GetCommandInfoResponse);
+  
+  // 系统管理 - 映射本地系统API
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc VerifyPin(VerifyPinRequest) returns (VerifyPinResponse);
+  rpc ReloadCommands(ReloadCommandsRequest) returns (ReloadCommandsResponse);
+  rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+}
+
+// ===== 设备管理相关 =====
+
+message RegisterDeviceRequest {
+  string device_id = 1;
+  string device_name = 2;
+  string user_id = 3;
+  string platform = 4;          // windows, linux, macos
+  string version = 5;           // agent版本
+  map<string, string> metadata = 6;
+}
+
+message RegisterDeviceResponse {
+  bool success = 1;
+  string message = 2;
+  string access_token = 3;      // 设备访问令牌
+}
+
+message GetDeviceStatusRequest {
+  string device_id = 1;
+  string user_id = 2;
+}
+
+message DeviceStatus {
+  string device_id = 1;
+  string device_name = 2;
+  string platform = 3;
+  bool online = 4;
+  google.protobuf.Timestamp last_seen = 5;
+  string version = 6;
+  map<string, string> system_info = 7;
+}
+
+message GetDeviceStatusResponse {
+  bool success = 1;
+  string message = 2;
+  DeviceStatus device = 3;
+}
+
+message ListUserDevicesRequest {
+  string user_id = 1;
+}
+
+message ListUserDevicesResponse {
+  bool success = 1;
+  string message = 2;
+  repeated DeviceStatus devices = 3;
+}
+
+// ===== 命令管理相关 - 映射本地 HTTP API =====
+
+message CreateCommandRequest {
+  string device_id = 1;
+  string user_id = 2;
+  string id = 3;
+  string name = 4;
+  string description = 5;
+  string category = 6;
+  string icon = 7;
+  string command = 8;
+  string platform = 9;
+  string command_type = 10;
+  int32 timeout = 11;
+  string template_id = 12;
+  map<string, string> template_params = 13;
+  SecurityConfig security = 14;
+  HomeLayoutConfig home_layout = 15;
+}
+
+message UpdateCommandRequest {
+  string device_id = 1;
+  string user_id = 2;
+  string command_id = 3;
+  string name = 4;
+  string description = 5;
+  string command = 6;
+  string category = 7;
+  string icon = 8;
+  string platform = 9;
+  string command_type = 10;
+  int32 timeout = 11;
+  string template_id = 12;
+  map<string, string> template_params = 13;
+  SecurityConfig security = 14;
+  HomeLayoutConfig home_layout = 15;
+}
+
+message DeleteCommandRequest {
+  string device_id = 1;
+  string user_id = 2;
+  string command_id = 3;
+}
+
+message GetCommandRequest {
+  string device_id = 1;
+  string user_id = 2;
+  string command_id = 3;
+}
+
+message GetAllCommandsRequest {
+  string device_id = 1;
+  string user_id = 2;
+}
+
+message GetHomepageCommandsRequest {
+  string device_id = 1;
+  string user_id = 2;
+}
+
+message SecurityConfig {
+  bool require_pin = 1;
+  bool whitelist = 2;
+  bool admin_only = 3;
+}
+
+message PositionConfig {
+  int32 x = 1;
+  int32 y = 2;
+  int32 width = 3;
+  int32 height = 4;
+}
+
+message HomeLayoutConfig {
+  bool show_on_home = 1;
+  PositionConfig default_position = 2;
+  string color = 3;
+  int32 priority = 4;
+}
+
+message CommandInfo {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string category = 4;
+  string icon = 5;
+  string command = 6;
+  string platform = 7;
+  string command_type = 8;
+  int32 timeout = 9;
+  string user_id = 10;
+  string device_id = 11;
+  string template_id = 12;
+  map<string, string> template_params = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+  bool requires_pin = 16;
+  bool whitelisted = 17;
+  bool available = 18;
+  bool show_on_homepage = 19;
+  string homepage_color = 20;
+  int32 homepage_priority = 21;
+  PositionConfig homepage_position = 22;
+}
+
+message CreateCommandResponse {
+  bool success = 1;
+  string message = 2;
+  CommandInfo command = 3;
+}
+
+message UpdateCommandResponse {
+  bool success = 1;
+  string message = 2;
+  CommandInfo command = 3;
+}
+
+message DeleteCommandResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetCommandResponse {
+  bool success = 1;
+  string message = 2;
+  CommandInfo command = 3;
+}
+
+message GetAllCommandsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated CommandInfo commands = 3;
+}
+
+message GetHomepageCommandsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated CommandInfo commands = 3;
+}
+
+// ===== 命令执行相关 =====
+
+message ExecuteCommandRequest {
+  string device_id = 1;
+  string user_id = 2;
+  string command_id = 3;
+  string pin = 4;              // PIN for authentication
+}
+
+message ExecuteCommandResponse {
+  bool success = 1;
+  string output = 2;
+  string error = 3;
+  int32 exit_code = 4;
+  int64 duration = 5;          // Duration in milliseconds
+}
+
+message GetCommandInfoRequest {
+  string device_id = 1;
+  string user_id = 2;
+  string command_id = 3;
+}
+
+message GetCommandInfoResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, string> info = 3;
+}
+
+// ===== 系统管理相关 =====
+
+message HealthCheckRequest {
+  string device_id = 1;
+}
+
+message SystemInfo {
+  string os = 1;
+  string architecture = 2;
+  string go_version = 3;
+  int32 num_cpu = 4;
+  int32 num_goroutine = 5;
+}
+
+message HealthCheckResponse {
+  bool success = 1;
+  string status = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  string version = 4;
+  SystemInfo system = 5;
+  map<string, string> services = 6;
+}
+
+message VerifyPinRequest {
+  string device_id = 1;
+  string user_id = 2;
+  string pin = 3;
+}
+
+message VerifyPinResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ReloadCommandsRequest {
+  string device_id = 1;
+  string user_id = 2;
+}
+
+message ReloadCommandsResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetVersionRequest {
+  string device_id = 1;
+}
+
+message GetVersionResponse {
+  bool success = 1;
+  string version = 2;
+  string build_time = 3;
+  string git_commit = 4;
+}
+
+message GetStatusRequest {
+  string device_id = 1;
+}
+
+message GetStatusResponse {
+  bool success = 1;
+  string uptime = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  SystemInfo system = 4;
+  map<string, int64> memory = 5;
+  map<string, int32> commands = 6;
+  map<string, string> services = 7;
+}

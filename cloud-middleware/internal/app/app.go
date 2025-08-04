@@ -1,0 +1,196 @@
+package app
+
+import (
+	"context"
+	"fmt"
+	"net"
+
+	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
+	"gorm.io/gorm"
+
+	"github.com/myczh-1/lazy-ctrl-cloud/internal/config"
+	"github.com/myczh-1/lazy-ctrl-cloud/internal/database"
+	"github.com/myczh-1/lazy-ctrl-cloud/internal/handler/http"
+	"github.com/myczh-1/lazy-ctrl-cloud/internal/handler/grpc"
+	"github.com/myczh-1/lazy-ctrl-cloud/internal/middleware"
+	"github.com/myczh-1/lazy-ctrl-cloud/internal/repository"
+	"github.com/myczh-1/lazy-ctrl-cloud/internal/service"
+)
+
+// Application represents the main application
+type Application struct {
+	config     *config.Config
+	db         *gorm.DB
+	grpcServer *grpc.Server
+	
+	// Services
+	userService    *service.UserService
+	deviceService  *service.DeviceService
+	gatewayService *service.GatewayService
+	
+	// HTTP handlers
+	userHandler    *http.UserHandler
+	deviceHandler  *http.DeviceHandler
+	gatewayHandler *http.GatewayHandler
+	
+	// gRPC handlers
+	grpcGatewayHandler *grpchandler.GatewayHandler
+	grpcUserHandler    *grpchandler.UserHandler
+}
+
+// NewApplication creates a new application instance
+func NewApplication(cfg *config.Config) (*Application, error) {
+	app := &Application{
+		config: cfg,
+	}
+	
+	// Initialize database
+	if err := app.initDatabase(); err != nil {
+		return nil, fmt.Errorf("failed to initialize database: %w", err)
+	}
+	
+	// Initialize services
+	if err := app.initServices(); err != nil {
+		return nil, fmt.Errorf("failed to initialize services: %w", err)
+	}
+	
+	// Initialize handlers
+	if err := app.initHandlers(); err != nil {
+		return nil, fmt.Errorf("failed to initialize handlers: %w", err)
+	}
+	
+	return app, nil
+}
+
+// initDatabase initializes the database connection
+func (a *Application) initDatabase() error {
+	db, err := database.Connect(a.config.Database)
+	if err != nil {
+		return err
+	}
+	
+	a.db = db
+	return nil
+}
+
+// initServices initializes all services
+func (a *Application) initServices() error {
+	// Initialize repositories
+	userRepo := repository.NewUserRepository(a.db)
+	deviceRepo := repository.NewDeviceRepository(a.db)
+	
+	// Initialize services
+	a.userService = service.NewUserService(userRepo, a.config.JWT)
+	a.deviceService = service.NewDeviceService(deviceRepo)
+	a.gatewayService = service.NewGatewayService(a.deviceService)
+	
+	return nil
+}
+
+// initHandlers initializes all handlers
+func (a *Application) initHandlers() error {
+	// HTTP handlers
+	a.userHandler = http.NewUserHandler(a.userService)
+	a.deviceHandler = http.NewDeviceHandler(a.deviceService)
+	a.gatewayHandler = http.NewGatewayHandler(a.gatewayService)
+	
+	// gRPC handlers
+	a.grpcGatewayHandler = grpchandler.NewGatewayHandler(a.gatewayService)
+	a.grpcUserHandler = grpchandler.NewUserHandler(a.userService)
+	
+	return nil
+}
+
+// Router returns the HTTP router
+func (a *Application) Router() *gin.Engine {
+	router := gin.New()
+	
+	// Middleware
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
+	router.Use(middleware.CORS())
+	
+	// Health check
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "healthy"})
+	})
+	
+	// API routes
+	v1 := router.Group("/api/v1")
+	{
+		// User routes
+		auth := v1.Group("/auth")
+		{
+			auth.POST("/register", a.userHandler.Register)
+			auth.POST("/login", a.userHandler.Login)
+			auth.POST("/refresh", a.userHandler.RefreshToken)
+			auth.POST("/logout", middleware.AuthRequired(), a.userHandler.Logout)
+		}
+		
+		user := v1.Group("/user", middleware.AuthRequired())
+		{
+			user.GET("/profile", a.userHandler.GetProfile)
+			user.PUT("/profile", a.userHandler.UpdateProfile)
+			user.POST("/change-password", a.userHandler.ChangePassword)
+		}
+		
+		// Device routes
+		device := v1.Group("/device", middleware.AuthRequired())
+		{
+			device.POST("/bind", a.deviceHandler.BindDevice)
+			device.DELETE("/:device_id", a.deviceHandler.UnbindDevice)
+			device.GET("/list", a.deviceHandler.GetUserDevices)
+			device.PUT("/:device_id", a.deviceHandler.UpdateDeviceInfo)
+		}
+		
+		// Gateway routes (device command operations)
+		gateway := v1.Group("/gateway", middleware.AuthRequired())
+		{
+			gateway.POST("/commands", a.gatewayHandler.CreateCommand)
+			gateway.PUT("/commands/:command_id", a.gatewayHandler.UpdateCommand)
+			gateway.DELETE("/commands/:command_id", a.gatewayHandler.DeleteCommand)
+			gateway.GET("/commands/:command_id", a.gatewayHandler.GetCommand)
+			gateway.GET("/commands", a.gatewayHandler.GetAllCommands)
+			gateway.GET("/commands/homepage", a.gatewayHandler.GetHomepageCommands)
+			gateway.POST("/execute", a.gatewayHandler.ExecuteCommand)
+			gateway.GET("/health/:device_id", a.gatewayHandler.HealthCheck)
+		}
+	}
+	
+	return router
+}
+
+// StartGRPCServer starts the gRPC server
+func (a *Application) StartGRPCServer() error {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", a.config.GRPC.Port))
+	if err != nil {
+		return fmt.Errorf("failed to listen on port %d: %w", a.config.GRPC.Port, err)
+	}
+	
+	a.grpcServer = grpc.NewServer()
+	
+	// Register gRPC services
+	// Note: This would require importing the generated proto files
+	// gatewayPb.RegisterGatewayServiceServer(a.grpcServer, a.grpcGatewayHandler)
+	// userPb.RegisterUserServiceServer(a.grpcServer, a.grpcUserHandler)
+	
+	return a.grpcServer.Serve(lis)
+}
+
+// Stop gracefully stops the application
+func (a *Application) Stop(ctx context.Context) error {
+	if a.grpcServer != nil {
+		a.grpcServer.GracefulStop()
+	}
+	
+	// Close database connection
+	if a.db != nil {
+		sqlDB, err := a.db.DB()
+		if err == nil {
+			sqlDB.Close()
+		}
+	}
+	
+	return nil
+}

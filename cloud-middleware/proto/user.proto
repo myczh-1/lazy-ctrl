@@ -1,0 +1,228 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/myczh-1/lazy-ctrl-cloud/proto";
+
+import "google/protobuf/timestamp.proto";
+
+// 用户管理服务定义
+service UserService {
+  // 用户认证
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  
+  // 用户信息管理
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
+  rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UpdateUserProfileResponse);
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  
+  // 设备管理
+  rpc BindDevice(BindDeviceRequest) returns (BindDeviceResponse);
+  rpc UnbindDevice(UnbindDeviceRequest) returns (UnbindDeviceResponse);
+  rpc GetUserDevices(GetUserDevicesRequest) returns (GetUserDevicesResponse);
+  rpc UpdateDeviceInfo(UpdateDeviceInfoRequest) returns (UpdateDeviceInfoResponse);
+}
+
+// ===== 用户认证相关 =====
+
+message RegisterRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+  string phone = 4;
+}
+
+message RegisterResponse {
+  bool success = 1;
+  string message = 2;
+  string user_id = 3;
+  string access_token = 4;
+  string refresh_token = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+message LoginRequest {
+  string username = 1;          // 支持用户名/邮箱/手机号登录
+  string password = 2;
+}
+
+message LoginResponse {
+  bool success = 1;
+  string message = 2;
+  string user_id = 3;
+  string access_token = 4;
+  string refresh_token = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  UserProfile user_profile = 7;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  bool success = 1;
+  string message = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message LogoutRequest {
+  string user_id = 1;
+  string refresh_token = 2;
+}
+
+message LogoutResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ===== 用户信息管理 =====
+
+message UserProfile {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  string phone = 4;
+  string nickname = 5;
+  string avatar_url = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  UserSettings settings = 9;
+}
+
+message UserSettings {
+  string language = 1;          // zh-CN, en-US
+  string timezone = 2;          // Asia/Shanghai
+  bool email_notifications = 3;
+  bool push_notifications = 4;
+  SecuritySettings security_settings = 5;
+}
+
+message SecuritySettings {
+  bool two_factor_enabled = 1;
+  bool device_verification_required = 2;
+  int32 session_timeout_minutes = 3;
+}
+
+message GetUserProfileRequest {
+  string user_id = 1;
+}
+
+message GetUserProfileResponse {
+  bool success = 1;
+  string message = 2;
+  UserProfile user_profile = 3;
+}
+
+message UpdateUserProfileRequest {
+  string user_id = 1;
+  string nickname = 2;
+  string avatar_url = 3;
+  UserSettings settings = 4;
+}
+
+message UpdateUserProfileResponse {
+  bool success = 1;
+  string message = 2;
+  UserProfile user_profile = 3;
+}
+
+message ChangePasswordRequest {
+  string user_id = 1;
+  string old_password = 2;
+  string new_password = 3;
+}
+
+message ChangePasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ===== 设备管理相关 =====
+
+message DeviceInfo {
+  string device_id = 1;
+  string user_id = 2;
+  string device_name = 3;
+  string device_type = 4;       // desktop, laptop, server
+  string platform = 5;         // windows, linux, macos
+  string ip_address = 6;
+  string mac_address = 7;
+  string agent_version = 8;
+  bool online = 9;
+  google.protobuf.Timestamp last_seen = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  map<string, string> system_info = 13;
+  DeviceSettings device_settings = 14;
+}
+
+message DeviceSettings {
+  bool auto_start = 1;          // 是否开机自启
+  bool allow_remote_shutdown = 2;
+  bool require_pin_for_execution = 3;
+  repeated string allowed_commands = 4;  // 允许执行的命令类别
+  SecurityLevel security_level = 5;
+}
+
+enum SecurityLevel {
+  LOW = 0;
+  MEDIUM = 1;
+  HIGH = 2;
+}
+
+message BindDeviceRequest {
+  string user_id = 1;
+  string device_id = 2;
+  string device_name = 3;
+  string device_type = 4;
+  string platform = 5;
+  string verification_code = 6;  // 设备验证码
+  map<string, string> system_info = 7;
+}
+
+message BindDeviceResponse {
+  bool success = 1;
+  string message = 2;
+  DeviceInfo device_info = 3;
+  string device_token = 4;      // 设备访问令牌
+}
+
+message UnbindDeviceRequest {
+  string user_id = 1;
+  string device_id = 2;
+}
+
+message UnbindDeviceResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetUserDevicesRequest {
+  string user_id = 1;
+  bool online_only = 2;         // 是否只返回在线设备
+}
+
+message GetUserDevicesResponse {
+  bool success = 1;
+  string message = 2;
+  repeated DeviceInfo devices = 3;
+}
+
+message UpdateDeviceInfoRequest {
+  string user_id = 1;
+  string device_id = 2;
+  string device_name = 3;
+  DeviceSettings device_settings = 4;
+}
+
+message UpdateDeviceInfoResponse {
+  bool success = 1;
+  string message = 2;
+  DeviceInfo device_info = 3;
+}
