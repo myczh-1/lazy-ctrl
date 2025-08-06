@@ -15,6 +15,7 @@ type User struct {
 	Password  string    `gorm:"not null" json:"-"`
 	Nickname  string    `json:"nickname"`
 	AvatarURL string    `json:"avatar_url"`
+	Role      string    `gorm:"default:user" json:"role"` // admin, user
 	Status    string    `gorm:"default:active" json:"status"` // active, disabled, suspended
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

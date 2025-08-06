@@ -12,7 +12,7 @@ import (
 	"github.com/myczh-1/lazy-ctrl-cloud/internal/config"
 	"github.com/myczh-1/lazy-ctrl-cloud/internal/database"
 	"github.com/myczh-1/lazy-ctrl-cloud/internal/handler/http"
-	"github.com/myczh-1/lazy-ctrl-cloud/internal/handler/grpc"
+	grpchandler "github.com/myczh-1/lazy-ctrl-cloud/internal/handler/grpc"
 	"github.com/myczh-1/lazy-ctrl-cloud/internal/middleware"
 	"github.com/myczh-1/lazy-ctrl-cloud/internal/repository"
 	"github.com/myczh-1/lazy-ctrl-cloud/internal/service"
@@ -25,7 +25,7 @@ type Application struct {
 	grpcServer *grpc.Server
 	
 	// Services
-	userService    *service.UserService
+	userService    service.UserService
 	deviceService  *service.DeviceService
 	gatewayService *service.GatewayService
 	
@@ -78,12 +78,17 @@ func (a *Application) initDatabase() error {
 func (a *Application) initServices() error {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(a.db)
-	deviceRepo := repository.NewDeviceRepository(a.db)
+	// deviceRepo := repository.NewDeviceRepository(a.db)
 	
 	// Initialize services
 	a.userService = service.NewUserService(userRepo, a.config.JWT)
-	a.deviceService = service.NewDeviceService(deviceRepo)
-	a.gatewayService = service.NewGatewayService(a.deviceService)
+	// a.deviceService = service.NewDeviceService(deviceRepo)
+	// a.gatewayService = service.NewGatewayService(a.deviceService)
+	
+	// Initialize default admin user
+	if err := a.userService.InitializeSystem(); err != nil {
+		return fmt.Errorf("failed to initialize system: %w", err)
+	}
 	
 	return nil
 }
@@ -92,12 +97,12 @@ func (a *Application) initServices() error {
 func (a *Application) initHandlers() error {
 	// HTTP handlers
 	a.userHandler = http.NewUserHandler(a.userService)
-	a.deviceHandler = http.NewDeviceHandler(a.deviceService)
-	a.gatewayHandler = http.NewGatewayHandler(a.gatewayService)
+	// a.deviceHandler = http.NewDeviceHandler(a.deviceService)
+	// a.gatewayHandler = http.NewGatewayHandler(a.gatewayService)
 	
 	// gRPC handlers
-	a.grpcGatewayHandler = grpchandler.NewGatewayHandler(a.gatewayService)
-	a.grpcUserHandler = grpchandler.NewUserHandler(a.userService)
+	// a.grpcGatewayHandler = grpchandler.NewGatewayHandler(a.gatewayService)
+	// a.grpcUserHandler = grpchandler.NewUserHandler(a.userService)
 	
 	return nil
 }
@@ -119,15 +124,15 @@ func (a *Application) Router() *gin.Engine {
 	// API routes
 	v1 := router.Group("/api/v1")
 	{
-		// User routes
+		// Authentication routes
 		auth := v1.Group("/auth")
 		{
-			auth.POST("/register", a.userHandler.Register)
 			auth.POST("/login", a.userHandler.Login)
 			auth.POST("/refresh", a.userHandler.RefreshToken)
 			auth.POST("/logout", middleware.AuthRequired(), a.userHandler.Logout)
 		}
 		
+		// User profile routes
 		user := v1.Group("/user", middleware.AuthRequired())
 		{
 			user.GET("/profile", a.userHandler.GetProfile)
@@ -135,27 +140,37 @@ func (a *Application) Router() *gin.Engine {
 			user.POST("/change-password", a.userHandler.ChangePassword)
 		}
 		
-		// Device routes
-		device := v1.Group("/device", middleware.AuthRequired())
+		// Admin routes for user management
+		admin := v1.Group("/admin", middleware.AuthRequired())
 		{
-			device.POST("/bind", a.deviceHandler.BindDevice)
-			device.DELETE("/:device_id", a.deviceHandler.UnbindDevice)
-			device.GET("/list", a.deviceHandler.GetUserDevices)
-			device.PUT("/:device_id", a.deviceHandler.UpdateDeviceInfo)
+			admin.POST("/users", a.userHandler.CreateUser)
+			admin.GET("/users", a.userHandler.ListUsers)
+			admin.GET("/users/:user_id", a.userHandler.GetUser)
+			admin.PUT("/users/:user_id", a.userHandler.UpdateUser)
+			admin.DELETE("/users/:user_id", a.userHandler.DeleteUser)
 		}
 		
-		// Gateway routes (device command operations)
-		gateway := v1.Group("/gateway", middleware.AuthRequired())
-		{
-			gateway.POST("/commands", a.gatewayHandler.CreateCommand)
-			gateway.PUT("/commands/:command_id", a.gatewayHandler.UpdateCommand)
-			gateway.DELETE("/commands/:command_id", a.gatewayHandler.DeleteCommand)
-			gateway.GET("/commands/:command_id", a.gatewayHandler.GetCommand)
-			gateway.GET("/commands", a.gatewayHandler.GetAllCommands)
-			gateway.GET("/commands/homepage", a.gatewayHandler.GetHomepageCommands)
-			gateway.POST("/execute", a.gatewayHandler.ExecuteCommand)
-			gateway.GET("/health/:device_id", a.gatewayHandler.HealthCheck)
-		}
+		// Device routes (placeholder)
+		// device := v1.Group("/device", middleware.AuthRequired())
+		// {
+		//     device.POST("/bind", a.deviceHandler.BindDevice)
+		//     device.DELETE("/:device_id", a.deviceHandler.UnbindDevice)
+		//     device.GET("/list", a.deviceHandler.GetUserDevices)
+		//     device.PUT("/:device_id", a.deviceHandler.UpdateDeviceInfo)
+		// }
+		
+		// Gateway routes (placeholder)
+		// gateway := v1.Group("/gateway", middleware.AuthRequired())
+		// {
+		//     gateway.POST("/commands", a.gatewayHandler.CreateCommand)
+		//     gateway.PUT("/commands/:command_id", a.gatewayHandler.UpdateCommand)
+		//     gateway.DELETE("/commands/:command_id", a.gatewayHandler.DeleteCommand)
+		//     gateway.GET("/commands/:command_id", a.gatewayHandler.GetCommand)
+		//     gateway.GET("/commands", a.gatewayHandler.GetAllCommands)
+		//     gateway.GET("/commands/homepage", a.gatewayHandler.GetHomepageCommands)
+		//     gateway.POST("/execute", a.gatewayHandler.ExecuteCommand)
+		//     gateway.GET("/health/:device_id", a.gatewayHandler.HealthCheck)
+		// }
 	}
 	
 	return router
