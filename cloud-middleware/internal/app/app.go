@@ -16,6 +16,7 @@ import (
 	"github.com/myczh-1/lazy-ctrl-cloud/internal/middleware"
 	"github.com/myczh-1/lazy-ctrl-cloud/internal/repository"
 	"github.com/myczh-1/lazy-ctrl-cloud/internal/service"
+	gatewayPb "github.com/myczh-1/lazy-ctrl-cloud/proto"
 )
 
 // Application represents the main application
@@ -78,12 +79,12 @@ func (a *Application) initDatabase() error {
 func (a *Application) initServices() error {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(a.db)
-	// deviceRepo := repository.NewDeviceRepository(a.db)
+	deviceRepo := repository.NewDeviceRepository(a.db)
 	
 	// Initialize services
 	a.userService = service.NewUserService(userRepo, a.config.JWT)
-	// a.deviceService = service.NewDeviceService(deviceRepo)
-	// a.gatewayService = service.NewGatewayService(a.deviceService)
+	a.deviceService = service.NewDeviceService(deviceRepo)
+	a.gatewayService = service.NewGatewayService()
 	
 	// Initialize default admin user
 	if err := a.userService.InitializeSystem(); err != nil {
@@ -98,10 +99,10 @@ func (a *Application) initHandlers() error {
 	// HTTP handlers
 	a.userHandler = http.NewUserHandler(a.userService)
 	// a.deviceHandler = http.NewDeviceHandler(a.deviceService)
-	// a.gatewayHandler = http.NewGatewayHandler(a.gatewayService)
+	a.gatewayHandler = http.NewGatewayHandler(a.gatewayService, a.deviceService)
 	
 	// gRPC handlers
-	// a.grpcGatewayHandler = grpchandler.NewGatewayHandler(a.gatewayService)
+	a.grpcGatewayHandler = grpchandler.NewGatewayHandler(a.gatewayService, a.deviceService)
 	// a.grpcUserHandler = grpchandler.NewUserHandler(a.userService)
 	
 	return nil
@@ -159,18 +160,21 @@ func (a *Application) Router() *gin.Engine {
 		//     device.PUT("/:device_id", a.deviceHandler.UpdateDeviceInfo)
 		// }
 		
-		// Gateway routes (placeholder)
-		// gateway := v1.Group("/gateway", middleware.AuthRequired())
-		// {
-		//     gateway.POST("/commands", a.gatewayHandler.CreateCommand)
-		//     gateway.PUT("/commands/:command_id", a.gatewayHandler.UpdateCommand)
-		//     gateway.DELETE("/commands/:command_id", a.gatewayHandler.DeleteCommand)
-		//     gateway.GET("/commands/:command_id", a.gatewayHandler.GetCommand)
-		//     gateway.GET("/commands", a.gatewayHandler.GetAllCommands)
-		//     gateway.GET("/commands/homepage", a.gatewayHandler.GetHomepageCommands)
-		//     gateway.POST("/execute", a.gatewayHandler.ExecuteCommand)
-		//     gateway.GET("/health/:device_id", a.gatewayHandler.HealthCheck)
-		// }
+		// Gateway routes
+		gateway := v1.Group("/gateway", middleware.AuthRequired())
+		{
+			// Command execution
+			gateway.POST("/execute", a.gatewayHandler.ExecuteCommand)
+			gateway.GET("/commands", a.gatewayHandler.ListCommands)
+			
+			// Device management
+			gateway.POST("/devices/connect", a.gatewayHandler.ConnectDevice)
+			gateway.DELETE("/devices/:device_id/disconnect", a.gatewayHandler.DisconnectDevice)
+			gateway.GET("/devices", a.gatewayHandler.ListConnectedDevices)
+			gateway.GET("/devices/:device_id/status", a.gatewayHandler.GetDeviceStatus)
+			gateway.GET("/devices/:device_id/health", a.gatewayHandler.HealthCheck)
+			gateway.POST("/devices/:device_id/reload", a.gatewayHandler.ReloadConfig)
+		}
 	}
 	
 	return router
@@ -186,8 +190,7 @@ func (a *Application) StartGRPCServer() error {
 	a.grpcServer = grpc.NewServer()
 	
 	// Register gRPC services
-	// Note: This would require importing the generated proto files
-	// gatewayPb.RegisterGatewayServiceServer(a.grpcServer, a.grpcGatewayHandler)
+	gatewayPb.RegisterGatewayServiceServer(a.grpcServer, a.grpcGatewayHandler)
 	// userPb.RegisterUserServiceServer(a.grpcServer, a.grpcUserHandler)
 	
 	return a.grpcServer.Serve(lis)
@@ -197,6 +200,11 @@ func (a *Application) StartGRPCServer() error {
 func (a *Application) Stop(ctx context.Context) error {
 	if a.grpcServer != nil {
 		a.grpcServer.GracefulStop()
+	}
+	
+	// Stop gateway service
+	if a.gatewayService != nil {
+		a.gatewayService.Stop()
 	}
 	
 	// Close database connection

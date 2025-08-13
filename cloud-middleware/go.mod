@@ -15,4 +15,7 @@ require (
 	google.golang.org/protobuf v1.31.0
 	gorm.io/driver/postgres v1.5.2
 	gorm.io/gorm v1.25.4
+	github.com/myczh-1/lazy-ctrl-agent v0.0.0-00010101000000-000000000000
 )
+
+replace github.com/myczh-1/lazy-ctrl-agent => ../controller-agent

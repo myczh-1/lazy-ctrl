@@ -24,7 +24,8 @@
       "Bash(rm:*)",
       "Bash(timeout:*)",
       "Bash(~/go/bin/swag init:*)",
-      "Bash(wget:*)"
+      "Bash(wget:*)",
+      "Bash(protoc:*)"
     ],
     "deny": []
   }
