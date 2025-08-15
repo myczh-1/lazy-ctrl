@@ -229,3 +229,79 @@ func (ds *DeviceService) UpdateDeviceLastSeen(deviceID string) error {
 	device.LastSeen = time.Now()
 	return ds.deviceRepo.Update(device)
 }
+
+// ===== Command Management Methods =====
+
+// CreateDeviceCommand creates a new command for a device
+func (ds *DeviceService) CreateDeviceCommand(command *model.DeviceCommand) error {
+	// Validate that the device exists
+	device, err := ds.deviceRepo.GetByID(command.DeviceID)
+	if err != nil {
+		return fmt.Errorf("device not found: %w", err)
+	}
+	if device == nil {
+		return fmt.Errorf("device %s does not exist", command.DeviceID)
+	}
+
+	return ds.deviceRepo.CreateDeviceCommand(command)
+}
+
+// GetDeviceCommand retrieves a specific command for a device
+func (ds *DeviceService) GetDeviceCommand(deviceID, commandID string) (*model.DeviceCommand, error) {
+	return ds.deviceRepo.GetDeviceCommand(deviceID, commandID)
+}
+
+// GetDeviceCommands retrieves all commands for a device
+func (ds *DeviceService) GetDeviceCommands(deviceID string) ([]*model.DeviceCommand, error) {
+	return ds.deviceRepo.GetDeviceCommands(deviceID)
+}
+
+// GetHomepageCommands retrieves commands that should be shown on homepage
+func (ds *DeviceService) GetHomepageCommands(deviceID string) ([]*model.DeviceCommand, error) {
+	allCommands, err := ds.deviceRepo.GetDeviceCommands(deviceID)
+	if err != nil {
+		return nil, err
+	}
+
+	var homepageCommands []*model.DeviceCommand
+	for _, cmd := range allCommands {
+		if cmd.ShowOnHomepage {
+			homepageCommands = append(homepageCommands, cmd)
+		}
+	}
+
+	return homepageCommands, nil
+}
+
+// UpdateDeviceCommand updates an existing command
+func (ds *DeviceService) UpdateDeviceCommand(command *model.DeviceCommand) error {
+	// Check if command exists
+	existing, err := ds.deviceRepo.GetDeviceCommand(command.DeviceID, command.CommandID)
+	if err != nil {
+		return fmt.Errorf("command not found: %w", err)
+	}
+	if existing == nil {
+		return fmt.Errorf("command %s does not exist for device %s", command.CommandID, command.DeviceID)
+	}
+
+	// Update with new values
+	command.ID = existing.ID
+	command.CreatedAt = existing.CreatedAt
+	command.UpdatedAt = time.Now()
+
+	return ds.deviceRepo.UpdateDeviceCommand(command)
+}
+
+// DeleteDeviceCommand deletes a command from a device
+func (ds *DeviceService) DeleteDeviceCommand(deviceID, commandID string) error {
+	// Check if command exists
+	existing, err := ds.deviceRepo.GetDeviceCommand(deviceID, commandID)
+	if err != nil {
+		return fmt.Errorf("command not found: %w", err)
+	}
+	if existing == nil {
+		return fmt.Errorf("command %s does not exist for device %s", commandID, deviceID)
+	}
+
+	return ds.deviceRepo.DeleteDeviceCommand(deviceID, commandID)
+}

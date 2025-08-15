@@ -8,7 +8,7 @@ import (
 
 // User represents a user in the system
 type User struct {
-	ID        string    `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	ID        string    `gorm:"primaryKey" json:"id"`
 	Username  string    `gorm:"uniqueIndex;not null" json:"username"`
 	Email     string    `gorm:"uniqueIndex;not null" json:"email"`
 	Phone     string    `gorm:"uniqueIndex" json:"phone"`
@@ -46,10 +46,14 @@ func (User) TableName() string {
 
 // BeforeCreate will set UUID and timestamps
 func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.ID == "" {
+		u.ID = generateUUID()
+	}
 	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
 	return nil
 }
+
 
 // BeforeUpdate will set updated timestamp
 func (u *User) BeforeUpdate(tx *gorm.DB) error {

@@ -32,12 +32,10 @@ type Application struct {
 	
 	// HTTP handlers
 	userHandler    *http.UserHandler
-	deviceHandler  *http.DeviceHandler
 	gatewayHandler *http.GatewayHandler
 	
 	// gRPC handlers
 	grpcGatewayHandler *grpchandler.GatewayHandler
-	grpcUserHandler    *grpchandler.UserHandler
 }
 
 // NewApplication creates a new application instance
@@ -98,12 +96,10 @@ func (a *Application) initServices() error {
 func (a *Application) initHandlers() error {
 	// HTTP handlers
 	a.userHandler = http.NewUserHandler(a.userService)
-	// a.deviceHandler = http.NewDeviceHandler(a.deviceService)
 	a.gatewayHandler = http.NewGatewayHandler(a.gatewayService, a.deviceService)
 	
 	// gRPC handlers
 	a.grpcGatewayHandler = grpchandler.NewGatewayHandler(a.gatewayService, a.deviceService)
-	// a.grpcUserHandler = grpchandler.NewUserHandler(a.userService)
 	
 	return nil
 }
