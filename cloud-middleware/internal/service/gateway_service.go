@@ -270,6 +270,50 @@ func (gs *GatewayService) ReloadConfig(deviceID string) (*controllerPb.ReloadCon
 	return client.ReloadConfig(ctx, req)
 }
 
+// VerifyPin verifies PIN on a device
+func (gs *GatewayService) VerifyPin(deviceID, pin string) (*controllerPb.VerifyPinResponse, error) {
+	client, err := gs.GetDeviceClient(deviceID)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := &controllerPb.VerifyPinRequest{
+		Pin: pin,
+	}
+	return client.VerifyPin(ctx, req)
+}
+
+// GetVersion retrieves version information from a device
+func (gs *GatewayService) GetVersion(deviceID string) (*controllerPb.GetVersionResponse, error) {
+	client, err := gs.GetDeviceClient(deviceID)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := &controllerPb.GetVersionRequest{}
+	return client.GetVersion(ctx, req)
+}
+
+// GetStatus retrieves system status from a device
+func (gs *GatewayService) GetStatus(deviceID string) (*controllerPb.GetStatusResponse, error) {
+	client, err := gs.GetDeviceClient(deviceID)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := &controllerPb.GetStatusRequest{}
+	return client.GetStatus(ctx, req)
+}
+
 // Stop gracefully stops the gateway service
 func (gs *GatewayService) Stop() error {
 	gs.mutex.Lock()

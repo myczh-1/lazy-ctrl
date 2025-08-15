@@ -17,6 +17,15 @@ service ControllerService {
   
   // 健康检查
   rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  
+  // PIN验证
+  rpc VerifyPin(VerifyPinRequest) returns (VerifyPinResponse);
+  
+  // 获取版本信息
+  rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
+  
+  // 获取系统状态
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
 }
 
 // 执行命令请求
@@ -75,4 +84,52 @@ message HealthCheckResponse {
   string status = 1;           // 状态: "SERVING", "NOT_SERVING"
   string version = 2;          // 版本信息
   int64 uptime_seconds = 3;    // 运行时间(秒)
+}
+
+// PIN验证请求
+message VerifyPinRequest {
+  string pin = 1;              // PIN码
+}
+
+// PIN验证响应
+message VerifyPinResponse {
+  bool success = 1;            // 验证是否成功
+  string message = 2;          // 响应消息
+  bool valid = 3;              // PIN是否有效
+}
+
+// 获取版本信息请求
+message GetVersionRequest {
+  // 暂时无参数
+}
+
+// 获取版本信息响应
+message GetVersionResponse {
+  bool success = 1;            // 请求是否成功
+  string message = 2;          // 响应消息
+  string version = 3;          // 版本号
+  string build_time = 4;       // 构建时间
+  string commit_hash = 5;      // Git提交哈希
+  string go_version = 6;       // Go版本
+  string platform = 7;        // 平台信息
+  string api_version = 8;      // API版本
+}
+
+// 获取系统状态请求
+message GetStatusRequest {
+  // 暂时无参数
+}
+
+// 获取系统状态响应
+message GetStatusResponse {
+  bool success = 1;            // 请求是否成功
+  string message = 2;          // 响应消息
+  bool online = 3;             // 是否在线
+  int64 uptime_seconds = 4;    // 运行时间(秒)
+  double cpu_usage = 5;        // CPU使用率
+  double memory_usage = 6;     // 内存使用率
+  double disk_usage = 7;       // 磁盘使用率
+  map<string, string> system_info = 8;      // 系统信息
+  map<string, string> service_status = 9;   // 服务状态
+  int64 last_seen = 10;        // 最后活跃时间戳
 }

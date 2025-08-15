@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"runtime"
 	"time"
 
 	"google.golang.org/grpc"
@@ -16,6 +17,7 @@ import (
 	"github.com/myczh-1/lazy-ctrl-agent/internal/command/service"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/infrastructure/executor"
 	"github.com/myczh-1/lazy-ctrl-agent/internal/infrastructure/security"
+	"github.com/myczh-1/lazy-ctrl-agent/internal/common"
 	pb "github.com/myczh-1/lazy-ctrl-agent/proto"
 )
 
@@ -208,7 +210,84 @@ func (s *Server) ReloadConfig(ctx context.Context, req *pb.ReloadConfigRequest) 
 func (s *Server) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) {
 	return &pb.HealthCheckResponse{
 		Status:        "SERVING",
-		Version:       "2.0.0",
+		Version:       common.AppVersion,
 		UptimeSeconds: int64(time.Since(s.startTime).Seconds()),
+	}, nil
+}
+
+// VerifyPin verifies the provided PIN
+func (s *Server) VerifyPin(ctx context.Context, req *pb.VerifyPinRequest) (*pb.VerifyPinResponse, error) {
+	if req.Pin == "" {
+		return &pb.VerifyPinResponse{
+			Success: false,
+			Message: "PIN is required",
+			Valid:   false,
+		}, nil
+	}
+
+	isValid := s.securityService.ValidatePin(req.Pin)
+	
+	var message string
+	if isValid {
+		message = "PIN verification successful"
+	} else {
+		message = "Invalid PIN"
+	}
+
+	return &pb.VerifyPinResponse{
+		Success: true,
+		Message: message,
+		Valid:   isValid,
+	}, nil
+}
+
+// GetVersion returns version information
+func (s *Server) GetVersion(ctx context.Context, req *pb.GetVersionRequest) (*pb.GetVersionResponse, error) {
+	return &pb.GetVersionResponse{
+		Success:    true,
+		Message:    "Version information retrieved successfully",
+		Version:    common.AppVersion,
+		BuildTime:  "", // TODO: Add build-time variable
+		CommitHash: "", // TODO: Add build-time variable
+		GoVersion:  runtime.Version(),
+		Platform:   runtime.GOOS + "/" + runtime.GOARCH,
+		ApiVersion: "v1",
+	}, nil
+}
+
+// GetStatus returns system status information
+func (s *Server) GetStatus(ctx context.Context, req *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
+	// Get system information
+	systemInfo := make(map[string]string)
+	systemInfo["os"] = runtime.GOOS
+	systemInfo["arch"] = runtime.GOARCH
+	systemInfo["go_version"] = runtime.Version()
+	systemInfo["num_cpu"] = fmt.Sprintf("%d", runtime.NumCPU())
+	systemInfo["num_goroutine"] = fmt.Sprintf("%d", runtime.NumGoroutine())
+	systemInfo["app_name"] = common.AppName
+	
+	// Get service status
+	serviceStatus := make(map[string]string)
+	serviceStatus["http_server"] = "running"
+	serviceStatus["grpc_server"] = "running"
+	if s.config.MQTT.Enabled {
+		serviceStatus["mqtt_client"] = "enabled"
+	} else {
+		serviceStatus["mqtt_client"] = "disabled"
+	}
+	
+	// Note: Command count could be added to system info if needed
+	
+	return &pb.GetStatusResponse{
+		Success:       true,
+		Message:       "Status retrieved successfully",
+		Online:        true,
+		UptimeSeconds: int64(time.Since(s.startTime).Seconds()),
+		CpuUsage:      0.0,    // TODO: Implement actual CPU usage monitoring
+		MemoryUsage:   0.0,    // TODO: Implement actual memory usage monitoring
+		DiskUsage:     0.0,    // TODO: Implement actual disk usage monitoring
+		SystemInfo:    systemInfo,
+		ServiceStatus: serviceStatus,
+		LastSeen:      time.Now().Unix(),
 	}, nil
 }
